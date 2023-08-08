@@ -9,6 +9,11 @@ Took RoP09/tc-maxx last update that was posted here: https://www.mikrocontroller
 
 Fiddled around a bit to get it to run more stable.
 
+#UPDATE 08-08-2023
+Fixed library for working with latest VScode and Platformio Version.
+Compile and work:
+A testing binary is attached in folder binary (i suggest to compile your own version)
+
 Some changes/additions made:
 
 - RSSI value for BLE connection
