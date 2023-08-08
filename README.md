@@ -12,7 +12,7 @@ Fiddled around a bit to get it to run more stable.
 #UPDATE 08-08-2023
 Fixed library for working with latest VScode and Platformio Version.
 Compile and work:
-A testing binary is attached in folder binary (i suggest to compile your own version)
+A testing binary is attached in main folder (firmware.bin) for a 4MB ESP32 BOARD (i suggest to compile your own version).
 
 Some changes/additions made:
 
