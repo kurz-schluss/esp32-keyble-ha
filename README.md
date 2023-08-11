@@ -65,7 +65,7 @@ The bridge publishes to the given topic you entered at setup.
 My packages is ITALIAN, if you want to change take care of names or something will broke. If someone want to translate send a pull request.
 Also the package is for 1 lock only, you need to modify it if you have more lock of equiva and more esp32 bridge.
 
-Endpoints are:
+MQTT Endpoints are:
 
 - /battery true for good, false for low
 - /command 1 for status, 2 to unlock, 3 to lock, 4 to open and 5 to toggle)
