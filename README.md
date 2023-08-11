@@ -1,6 +1,6 @@
-# esp32-keyble
+# esp32-keyble-ha
 ESP32 port of the keyble library
-working, with some additions!
+working, with some additions and Home Assistant Package for full integration!
 
 Thanks go to <a href="https://github.com/RoP09">RoP09</a>, <a href="https://github.com/tc-maxx">tc-maxx</a>, <a href="https://github.com/henfri">henfri</a>, <a href="https://github.com/MariusSchiffer">MariusSchiffer</a> and of course <a href="https://github.com/oyooyo">oyooyo</a> for their brillant work!
 
@@ -29,6 +29,7 @@ Some changes/additions made:
 
 Step by step setup:
 
+#DEVICE SIDE SETUP
 - Erase the flash first because of SPIFFS usage and maybe stored old WiFi credentials.
 - Upload the project (I use Platformio).
 - Connect to the ESP32's WiFi network.
@@ -41,15 +42,26 @@ Step by step setup:
 - AutoConnect scans for networks in reach, just choose the one you want to connect to.
 - I recommend you to disable DHCP and give the bridge a static IP.
 - The ESP32 reboots, so you have to access it with the new given IP.
-- Follow the link and enter MQTT and KeyBLE credentials.
+- Follow the link and enter MQTT and KeyBLE credentials. (for direct use in home assistant use "eq3-bridge" as MQTT Topic)
 - After saving the credentials click on "Reset" to reboot.
 - You well be redirected to the main page of AutoConnect.
 - Click on "Home" to see the entered credentials.
 - Now everthing is set up and the ESP publishes its states to the given MQTT Broker.
 - It publishes the state once on startup and has then to be triggert from outside.
-- I use Node Red to get the locks state every 25 seconds to check for changes.
 
 The bridge publishes to the given topic you entered at setup.
+
+#HOME ASSISTANT SIDE SETUP
+- Put "eq3_bridge_package_IT.yaml" in packages folder of Home Assistant
+  (if you never use packages in Home Assistant follow also this step:=
+  - create a folder named “packages” in the same location where your configuration.yaml resides.
+  - then in configuration.yaml make it look like something similar to this (add the notated line under “homeassistant:”):
+    homeassistant:
+      packages: !include_dir_named packages
+  - reboot home assistant
+  - you will find lock, sensor, and also some notification (like low battery). Status of lock is readed on Home Assistant boot and also after 5 minutes of "unknown" battery status.
+My packages is ITALIAN, if you want to change take care of names or something will broke. If someone want to translate send a pull request.
+Also the package is for 1 lock only, you need to modify it if you have more lock of equiva and more esp32 bridge.
 
 Endpoints are:
 
