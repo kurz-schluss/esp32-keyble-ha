@@ -8,6 +8,9 @@ Thanks go to <a href="https://github.com/RoP09">RoP09</a>, <a href="https://gith
 Took RoP09/tc-maxx last update that was posted here: https://www.mikrocontroller.net/topic/458856#6650683 and here https://github.com/tc-maxx/esp32-keyble
 
 Fiddled around a bit to get it to run more stable.
+IF you have problem with wifi reconnect before flash in send this command in your terminal/shell changing port with yours:
+esptool.py --chip esp32 --port /dev/cu.usbserial-0001 erase_flash
+(search on web how to install esptool)
 
 #UPDATE 26-08-2023
 Add command in mqtt to reboot device (using payload 7)
