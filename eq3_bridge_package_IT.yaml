@@ -1,3 +1,7 @@
+#version 26-08-2023
+#more info on https://github.com/mccoy88f/esp32-keyble-ha
+#author: mccoy88f
+
 mqtt:
   lock:
     - name: Serratura Porta Casa
@@ -23,6 +27,10 @@ mqtt:
     - name: Aggiorna Serratura Porta Casa
       command_topic: "eq3-bridge/command"
       payload_press: "1"
+      device_class: update
+    - name: Riavvia Bridge Esp32
+      command_topic: "eq3-bridge/command"
+      payload_press: "7"
       device_class: update
     - name: Inverti Stato Serratura Porta Casa
       command_topic: "eq3-bridge/command"
