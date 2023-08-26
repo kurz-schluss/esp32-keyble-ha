@@ -57,6 +57,8 @@ bool KeyBLEConfigured = false;
 unsigned long starttime=0;
 int status = 0;
 int rssi = 0;
+bool do_restart = false;
+
 
 const int PushButton = 0;
 
@@ -258,6 +260,12 @@ void MqttCallback(char* topic, byte* payload, unsigned int length) {
     
   }
   */
+   //reboot esp32
+  if (payload[0] == '7') {
+    do_restart = true;
+    mqtt_sub = "*** restart ***";
+    Serial.println(mqtt_sub);
+  }
   //toggle
   if (payload[0] == '5')
   {
@@ -601,6 +609,25 @@ if (wifiActive)
     }
   }
 }
+
+if (do_restart) {
+    Serial.println("*** Restarting device ***");
+    delay(1000); // Optionally, provide a delay before restarting
+
+    // Publish the "working" state on the task topic
+    mqttClient.publish((String(MqttTopic + MQTT_PUB2).c_str()), "working");
+
+    // Allow time for the message to be sent
+    mqttClient.loop();
+
+    ESP.restart(); // Perform a software restart of the device
+}
+
+if (do_restart) {
+    // ... (come sopra)
+    do_restart = false; // Reset the restart flag
+}
+
 if (do_open || do_lock || do_unlock || do_status || do_toggle || do_pair) 
 {
   String str_task="working";
