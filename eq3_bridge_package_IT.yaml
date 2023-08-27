@@ -31,7 +31,7 @@ mqtt:
     - name: Riavvia Bridge Esp32
       command_topic: "eq3-bridge/command"
       payload_press: "7"
-      device_class: update
+      device_class: restart
     - name: Inverti Stato Serratura Porta Casa
       command_topic: "eq3-bridge/command"
       payload_press: "5"
