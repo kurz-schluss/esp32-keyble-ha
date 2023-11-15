@@ -4,7 +4,7 @@
 
 mqtt:
   lock:
-    - name: Serratura Porta Casa
+    - name: Schloss Haustür
       state_topic: "eq3-bridge/state"
       command_topic: "eq3-bridge/command"
       payload_lock: "3"
@@ -18,33 +18,33 @@ mqtt:
       optimistic: false
 
   binary_sensor:
-    - name: Stato Batteria Serratura Porta Casa
+    - name: Schloss Haustür Batterie Status
       state_topic: "eq3-bridge/battery"
       payload_on: "false"
       payload_off: "true"
       device_class: battery
   button:
-    - name: Aggiorna Serratura Porta Casa
+    - name: Schloss Haustür abfragen
       command_topic: "eq3-bridge/command"
       payload_press: "1"
       device_class: update
-    - name: Riavvia Bridge Esp32
+    - name: Neustart Esp32 Bridge
       command_topic: "eq3-bridge/command"
       payload_press: "7"
       device_class: restart
-    - name: Inverti Stato Serratura Porta Casa
+    - name: Schloss Haustür Zustand wechseln
       command_topic: "eq3-bridge/command"
       payload_press: "5"
       icon: mdi:toggle-switch
-    - name: Sblocca  Serratura Porta Casa
+    - name: Haustür öffnen
       command_topic: "eq3-bridge/command"
       payload_press: "4"
       icon: mdi:location-enter
   sensor:
-    - name: Attività RAW Serratura Porta Casa
+    - name: Attività RAW Schloss Haustür
       state_topic: "eq3-bridge/task"
       icon: mdi:home-lightning-bolt-outline
-    - name: Segnale Serratura Porta Casa
+    - name: Signalstärke Schloss Haustür
       state_topic: "eq3-bridge/rssi"
       device_class: signal_strength
       
@@ -52,7 +52,7 @@ sensor:
   - platform: template
     sensors:
       attivita_serratura_porta_casa:
-        friendly_name: "Attività Serratura Porta Casa"
+        friendly_name: "Attività Schloss Haustür"
         value_template: >-
           {% if is_state('sensor.attivita_raw_serratura_porta_casa', 'waiting') %}
             In attesa
