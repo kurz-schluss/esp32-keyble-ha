@@ -14,7 +14,7 @@
             "name": "PIO Debug",
             "executable": "/home/prof/ESP32/kurzschluss/esp32-keyble-ha/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "/home/prof/.platformio/packages/toolchain-xtensa32/bin",
+            "toolchainBinDir": "/home/prof/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "preLaunchTask": {
                 "type": "PlatformIO",
@@ -27,7 +27,7 @@
             "name": "PIO Debug (skip Pre-Debug)",
             "executable": "/home/prof/ESP32/kurzschluss/esp32-keyble-ha/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "/home/prof/.platformio/packages/toolchain-xtensa32/bin",
+            "toolchainBinDir": "/home/prof/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
@@ -36,7 +36,7 @@
             "name": "PIO Debug (without uploading)",
             "executable": "/home/prof/ESP32/kurzschluss/esp32-keyble-ha/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "/home/prof/.platformio/packages/toolchain-xtensa32/bin",
+            "toolchainBinDir": "/home/prof/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "loadMode": "manual"
         }
