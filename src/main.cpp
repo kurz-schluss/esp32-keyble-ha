@@ -63,6 +63,10 @@ bool do_restart = false;
 
 const int PushButton = 0;
 
+const char* ntpServer = "pool.ntp.org";
+const long  UTC_OFFSET_SEC = 3600;
+const int   DST_OFFSET_SEC = 3600;
+
 String  MqttServerName;
 String  MqttPort;
 String  MqttUserName;
@@ -500,6 +504,41 @@ void SetupWifi()
   Serial.println("# WiFi connected to IP: " + WiFi.localIP().toString());
   }
 }
+
+void printLocalTime(){
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  Serial.print("Day of week: ");
+  Serial.println(&timeinfo, "%A");
+  Serial.print("Month: ");
+  Serial.println(&timeinfo, "%B");
+  Serial.print("Day of Month: ");
+  Serial.println(&timeinfo, "%d");
+  Serial.print("Year: ");
+  Serial.println(&timeinfo, "%Y");
+  Serial.print("Hour: ");
+  Serial.println(&timeinfo, "%H");
+  Serial.print("Hour (12 hour format): ");
+  Serial.println(&timeinfo, "%I");
+  Serial.print("Minute: ");
+  Serial.println(&timeinfo, "%M");
+  Serial.print("Second: ");
+  Serial.println(&timeinfo, "%S");
+
+  Serial.println("Time variables");
+  char timeHour[3];
+  strftime(timeHour,3, "%H", &timeinfo);
+  Serial.println(timeHour);
+  char timeWeekDay[10];
+  strftime(timeWeekDay,10, "%A", &timeinfo);
+  Serial.println(timeWeekDay);
+  Serial.println();
+}
+
 // ---[Setup]-------------------------------------------------------------------
 void setup() {
   delay(1000);
@@ -536,10 +575,18 @@ void setup() {
    {
      Serial.println("load error");
    }
-   SetupWifi();
-   //Portal.config(config);
+  SetupWifi();
+  //Portal.config(config);
 
-  
+  // Init and get the time from NTP
+  // The eqiva lock synchronizes it's internal RTC from the bluetooth connection.
+  // If the ESP32's RTC in invalid, the lock runs on wrong time, resulting in wrong auto-close timetable
+
+  configTime(UTC_OFFSET_SEC, DST_OFFSET_SEC, ntpServer);
+  printLocalTime();
+
+
+
   //MQTT
   if(KeyBLEConfigured)
   {
@@ -580,7 +627,9 @@ if (wifiActive)
   if (WiFi.status() != WL_CONNECTED)
   {
    Serial.println("# WiFi disconnected, reconnect...");
-  SetupWifi();
+   SetupWifi();
+   //Resync internal RTC
+   configTime(UTC_OFFSET_SEC, DST_OFFSET_SEC, ntpServer);
   }
   else
   {
