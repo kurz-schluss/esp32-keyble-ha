@@ -5,6 +5,7 @@
 #include <string>
 #include "eQ3.h"
 #include "WiFi.h"
+#include "time.h"
 #include "PubSubClient.h"
 #include <esp_wifi.h>
 #include <WiFiClient.h>
