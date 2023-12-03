@@ -63,7 +63,7 @@ bool do_restart = false;
 
 const int PushButton = 0;
 
-const char* ntpServer = "pool.ntp.org";
+
 const long  UTC_OFFSET_SEC = 3600;
 const int   DST_OFFSET_SEC = 3600;
 
@@ -76,6 +76,7 @@ String  MqttTopic;
 String KeyBleMac;
 String KeyBleUserKey;
 String KeyBleUserId;
+String NTPServer ="pool.ntp.org";
 
 String mqtt_sub  = "";
 String mqtt_pub  = "";
@@ -148,6 +149,11 @@ static const char AUX_keyble_setting[] PROGMEM = R"raw(
         "label": "KeyBLE User ID"
       },
       {
+        "name": "NTPServer",
+        "type": "ACInput",
+        "label": "NTP Server"
+      },      
+      {
         "name": "save",
         "type": "ACSubmit",
         "value": "Save&amp;Start",
@@ -207,6 +213,8 @@ void getParams(AutoConnectAux& aux) {
   KeyBleUserKey.trim();
   KeyBleUserId = aux["KeyBleUserId"].value;
   KeyBleUserId.trim();
+  NTPServer= aux["NTPServer"].value;
+  NTPServer.trim();
  }
 // ---[loadParams]--------------------------------------------------------------
 String loadParams(AutoConnectAux& aux, PageArgument& args) {
@@ -236,7 +244,7 @@ String saveParams(AutoConnectAux& aux, PageArgument& args) {
   AutoConnectInput& mqttserver = keyble_setting["MqttServerName"].as<AutoConnectInput>();
 
   File param = FlashFS.open(PARAM_FILE, "w");
-  keyble_setting.saveElement(param, { "MqttServerName", "MqttPort", "MqttUserName", "MqttUserPass", "MqttTopic", "KeyBleMac", "KeyBleUserKey", "KeyBleUserId" });
+  keyble_setting.saveElement(param, { "MqttServerName", "MqttPort", "MqttUserName", "MqttUserPass", "MqttTopic", "KeyBleMac", "KeyBleUserKey", "KeyBleUserId", "NTPServer" });
   param.close();
 
   AutoConnectText&  echo = aux["parameters"].as<AutoConnectText>();
@@ -249,6 +257,7 @@ String saveParams(AutoConnectAux& aux, PageArgument& args) {
   echo.value += "KeyBLE MAC: " + KeyBleMac + "<br>";
   echo.value += "KeyBLE User Key: " + KeyBleUserKey + "<br>";
   echo.value += "KeyBLE User ID: " + KeyBleUserId + "<br>";
+  echo.value += "NTP Server:" + NTPServer + "<br>";
 
   return String("");
 }
@@ -389,7 +398,8 @@ void SetupMqtt() {
   while (!mqttClient.connected()) { // Loop until we're reconnected to the MQTT server
     mqttClient.setServer(MqttServerName.c_str(), MqttPort.toInt());
     mqttClient.setCallback(&MqttCallback);
-  	Serial.println("# Connect to MQTT-Broker... ");
+  	Serial.print("# Connect to MQTT-Broker "); 
+    Serial.println(MqttServerName.c_str());
     if (mqttClient.connect(MqttTopic.c_str(), MqttUserName.c_str(), MqttUserPass.c_str())) {
   		Serial.println("# Connected!");
       mqttClient.subscribe((String(MqttTopic + MQTT_SUB).c_str()));
@@ -435,7 +445,7 @@ void rootPage()
   {
     content +=
     "<h2 align=\"center\" style=\"color:red;margin:20px;\">Enter MQTT and KeyBLE credentials.</h2>"
-    "<div style=\"text-align:center;\"><a href=\"/keyble_setting\">Click here to configure MQTT and KeyBLE</a></div>";
+    "<div style=\"text-align:center;\"><a href=\"/keyble_setting\">Click here to configure MQTT, NTP and KeyBLE</a></div>";
   }
   if (KeyBLEConfigured && WiFi.localIP())
   {
@@ -452,6 +462,7 @@ void rootPage()
      "<h2 align=\"center\" style=\"color:green;margin:20px;\">KeyBLE last rssi: " + mqtt_pub4 + "</h2>"
      "<h2 align=\"center\" style=\"color:green;margin:20px;\">KeyBLE last state: " + mqtt_pub + "</h2>"
      "<h2 align=\"center\" style=\"color:green;margin:20px;\">KeyBLE last task: " + mqtt_pub2 + "</h2>"
+     "<h2 align=\"center\" style=\"color:green;margin:20px;\">NTP Server: " + NTPServer + "</h2>"
      "<br>"
      "<h2 align=\"center\" style=\"color:blue;margin:20px;\">page refresh every 30 seconds</h2>";
   }
@@ -580,9 +591,9 @@ void setup() {
 
   // Init and get the time from NTP
   // The eqiva lock synchronizes it's internal RTC from the bluetooth connection.
-  // If the ESP32's RTC in invalid, the lock runs on wrong time, resulting in wrong auto-close timetable
+  // If the ESP32's RTC in invalid, the lock runs on wrong time, resulting in wrong auto-lock timetable
 
-  configTime(UTC_OFFSET_SEC, DST_OFFSET_SEC, ntpServer);
+  configTime(UTC_OFFSET_SEC, DST_OFFSET_SEC, NTPServer.c_str());
   printLocalTime();
 
 
@@ -629,7 +640,7 @@ if (wifiActive)
    Serial.println("# WiFi disconnected, reconnect...");
    SetupWifi();
    //Resync internal RTC
-   configTime(UTC_OFFSET_SEC, DST_OFFSET_SEC, ntpServer);
+   configTime(UTC_OFFSET_SEC, DST_OFFSET_SEC, NTPServer.c_str());
   }
   else
   {
