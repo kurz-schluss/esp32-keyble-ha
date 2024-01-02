@@ -67,6 +67,16 @@ const int PushButton = 0;
 const long  UTC_OFFSET_SEC = 3600;
 const int   DST_OFFSET_SEC = 3600;
 
+//Default credentials for web server auth
+
+const char* www_username = "admin";
+const char* www_password = "esp32";
+
+// allows you to set the realm of authentication Default:"Login Required"
+const char* www_realm = "Login Required (see REAME)";
+// the Content of the HTML response in case of Unautherized Access Default:empty
+String authFailResponse = "Authentication Failed";
+
 String  MqttServerName;
 String  MqttPort;
 String  MqttUserName;
@@ -470,7 +480,19 @@ void rootPage()
   content +=
     "</body>"
     "</html>";
-  Server.send(200, "text/html", content);
+  if (!Server.authenticate(www_username, www_password))
+    //Basic Auth Method with Custom realm and Failure Response
+    //return server.requestAuthentication(BASIC_AUTH, www_realm, authFailResponse);
+    //Digest Auth Method with realm="Login Required" and empty Failure Response
+    //return server.requestAuthentication(DIGEST_AUTH);
+    //Digest Auth Method with Custom realm and empty Failure Response
+    //return server.requestAuthentication(DIGEST_AUTH, www_realm);
+    //Digest Auth Method with Custom realm and Failure Response
+    {
+      Serial.print("# Auth required for login!");
+      return Server.requestAuthentication(DIGEST_AUTH, www_realm, authFailResponse);
+    }
+  Server.send(200, "text/html", content);  
 }
 // ---[Wifi Signalquality]-----------------------------------------------------
 int GetWifiSignalQuality() {
@@ -533,8 +555,6 @@ void printLocalTime(){
   Serial.println(&timeinfo, "%Y");
   Serial.print("Hour: ");
   Serial.println(&timeinfo, "%H");
-  Serial.print("Hour (12 hour format): ");
-  Serial.println(&timeinfo, "%I");
   Serial.print("Minute: ");
   Serial.println(&timeinfo, "%M");
   Serial.print("Second: ");
