@@ -42,6 +42,7 @@ Step by step setup:
 - Connect to the ESP32's WiFi network.
 - By default the SSID is "KeyBLEBridge" with default password "eqivalock".
 - After you have connected to the network, go to 192.168.4.1 with you browser.
+- Login with default "admin"/"esp32"
 - At rootlevel you will just see a simple webpage.
 - Click on the gear to connect to your WiFi Network.
 - Now you will see the AutoConnect portal page.
