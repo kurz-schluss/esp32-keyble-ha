@@ -14,6 +14,7 @@
 #include <FS.h>
 #include <SPIFFS.h>
 #include "AutoConnect.h"
+#include <ArduinoJson.h> //To handle JSON messages over MQTT
 
 #define PARAM_FILE      "/keyble.json"
 #define AUX_SETTING_URI "/keyble_setting"
@@ -64,16 +65,12 @@ bool do_restart = false;
 const int PushButton = 0;
 
 
-const long  UTC_OFFSET_SEC = 3600;
-const int   DST_OFFSET_SEC = 3600;
-
 //Default credentials for web server auth
-
 const char* www_username = "admin";
 const char* www_password = "esp32";
 
 // allows you to set the realm of authentication Default:"Login Required"
-const char* www_realm = "Login Required (see REAME)";
+const char* www_realm = "Login Required (see README)";
 // the Content of the HTML response in case of Unautherized Access Default:empty
 String authFailResponse = "Authentication Failed";
 
@@ -81,12 +78,14 @@ String  MqttServerName;
 String  MqttPort;
 String  MqttUserName;
 String  MqttUserPass;
-String  MqttTopic;
+String  MqttTopic="homeassistant/lock/door";
 
 String KeyBleMac;
 String KeyBleUserKey;
 String KeyBleUserId;
 String NTPServer ="pool.ntp.org";
+//Default timezone is Europe/Berlin
+String Timezone="CET-1CEST,M3.5.0,M10.5.0/3";
 
 String mqtt_sub  = "";
 String mqtt_pub  = "";
@@ -164,6 +163,11 @@ static const char AUX_keyble_setting[] PROGMEM = R"raw(
         "label": "NTP Server"
       },      
       {
+        "name": "Timezone",
+        "type": "ACInput",
+        "label": "Timezone"
+      }, 
+      {
         "name": "save",
         "type": "ACSubmit",
         "value": "Save&amp;Start",
@@ -225,6 +229,8 @@ void getParams(AutoConnectAux& aux) {
   KeyBleUserId.trim();
   NTPServer= aux["NTPServer"].value;
   NTPServer.trim();
+  Timezone= aux["Timezone"].value;
+  Timezone.trim();
  }
 // ---[loadParams]--------------------------------------------------------------
 String loadParams(AutoConnectAux& aux, PageArgument& args) {
@@ -268,6 +274,7 @@ String saveParams(AutoConnectAux& aux, PageArgument& args) {
   echo.value += "KeyBLE User Key: " + KeyBleUserKey + "<br>";
   echo.value += "KeyBLE User ID: " + KeyBleUserId + "<br>";
   echo.value += "NTP Server:" + NTPServer + "<br>";
+  echo.value += "Timezone:" + Timezone + "<br>";
 
   return String("");
 }
@@ -538,6 +545,30 @@ void SetupWifi()
   }
 }
 
+
+// Set the timezone
+void setTimezone(String timezone){
+  Serial.printf("  Setting Timezone to %s\n",timezone.c_str());
+  setenv("TZ",timezone.c_str(),1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
+  tzset();
+}
+
+
+//Set NTP Time and timezone
+void initTime(String timezone){
+  struct tm timeinfo;
+
+  Serial.println("Setting up time");
+  configTime(0, 0, NTPServer.c_str());    // First connect to NTP server, with 0 TZ offset
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("  Failed to obtain time");
+    return;
+  }
+  Serial.println("  Got the time from NTP");
+  // Now we can set the real timezone
+  setTimezone(timezone);
+}
+
 void printLocalTime(){
   struct tm timeinfo;
   if(!getLocalTime(&timeinfo)){
@@ -545,33 +576,12 @@ void printLocalTime(){
     return;
   }
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-  Serial.print("Day of week: ");
-  Serial.println(&timeinfo, "%A");
-  Serial.print("Month: ");
-  Serial.println(&timeinfo, "%B");
-  Serial.print("Day of Month: ");
-  Serial.println(&timeinfo, "%d");
-  Serial.print("Year: ");
-  Serial.println(&timeinfo, "%Y");
-  Serial.print("Hour: ");
-  Serial.println(&timeinfo, "%H");
-  Serial.print("Minute: ");
-  Serial.println(&timeinfo, "%M");
-  Serial.print("Second: ");
-  Serial.println(&timeinfo, "%S");
-
-  Serial.println("Time variables");
-  char timeHour[3];
-  strftime(timeHour,3, "%H", &timeinfo);
-  Serial.println(timeHour);
-  char timeWeekDay[10];
-  strftime(timeWeekDay,10, "%A", &timeinfo);
-  Serial.println(timeWeekDay);
-  Serial.println();
 }
 
 // ---[Setup]-------------------------------------------------------------------
 void setup() {
+  struct tm timeinfo;
+
   delay(1000);
   Serial.begin(115200);
   Serial.println("---Starting up...---");
@@ -613,7 +623,7 @@ void setup() {
   // The eqiva lock synchronizes it's internal RTC from the bluetooth connection.
   // If the ESP32's RTC in invalid, the lock runs on wrong time, resulting in wrong auto-lock timetable
 
-  configTime(UTC_OFFSET_SEC, DST_OFFSET_SEC, NTPServer.c_str());
+  initTime(Timezone);
   printLocalTime();
 
 
@@ -660,7 +670,7 @@ if (wifiActive)
    Serial.println("# WiFi disconnected, reconnect...");
    SetupWifi();
    //Resync internal RTC
-   configTime(UTC_OFFSET_SEC, DST_OFFSET_SEC, NTPServer.c_str());
+   initTime(Timezone);
   }
   else
   {

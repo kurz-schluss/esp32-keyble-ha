@@ -1,0 +1,113 @@
+#version 15-11-2023
+#more info on https://github.com/kurz-schluss/esp32-keyble-ha
+#author: kurz-schluss
+
+mqtt:
+  lock:
+    - name: Schloss Haustür
+      state_topic: "homeassistant/lock/door/state"
+      command_topic: "homeassistant/lock/door/command"
+      payload_lock: "3"
+      payload_unlock: "2"
+      payload_open: "4"
+      state_locked: "locked"
+      state_unlocked: "unlocked"
+      state_locking: "moving"
+      state_unlocking: "moving"
+      state_jammed: "timeout"
+      optimistic: false
+
+  binary_sensor:
+    - name: Schloss Haustür Batterie Status
+      state_topic: "homeassistant/lock/door/battery"
+      payload_on: "false"
+      payload_off: "true"
+      device_class: battery
+  button:
+    - name: Schloss Haustür abfragen
+      command_topic: "homeassistant/lock/door/command"
+      payload_press: "1"
+      device_class: update
+    - name: Neustart Esp32 Bridge
+      command_topic: "homeassistant/lock/door/command"
+      payload_press: "7"
+      device_class: restart
+    - name: Schloss Haustür Zustand wechseln
+      command_topic: "homeassistant/lock/door/command"
+      payload_press: "5"
+      icon: mdi:toggle-switch
+    - name: Haustür öffnen
+      command_topic: "homeassistant/lock/door/command"
+      payload_press: "4"
+      icon: mdi:location-enter
+  sensor:
+    - name: Attività RAW Schloss Haustür
+      state_topic: "homeassistant/lock/door/task"
+      icon: mdi:home-lightning-bolt-outline
+    - name: Signalstärke Schloss Haustür
+      state_topic: "homeassistant/lock/door/rssi"
+      device_class: signal_strength
+      
+sensor:
+  - platform: template
+    sensors:
+      attivita_serratura_porta_casa:
+        friendly_name: "Attività Schloss Haustür"
+        value_template: >-
+          {% if is_state('sensor.attivita_raw_serratura_porta_casa', 'waiting') %}
+            In attesa
+          {% elif is_state('sensor.attivita_raw_serratura_porta_casa', 'working') %}
+            Esecuzione comando
+          {% elif is_state('sensor.attivita_raw_serratura_porta_casa', 'unknown') %}
+            Stato sconosciuto
+          {% else %}
+            {{ states('sensor.attivita_raw_serratura_porta_casa') }}
+          {% endif %}
+        icon_template: >-
+          {% if is_state('sensor.attivita_raw_serratura_porta_casa', 'waiting') %}
+            mdi:home-lightning-bolt-outline
+          {% elif is_state('sensor.attivita_raw_serratura_porta_casa', 'working') %}
+            mdi:hammer
+          {% elif is_state('sensor.attivita_raw_serratura_porta_casa', 'unknown') %}
+            mdi:help-circle
+          {% else %}
+            mdi:home
+          {% endif %}
+
+automation:
+  - alias: Aggiorna stato serratura EQ3 all'avvio di Home Assistant
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - service: button.press
+        data: {}
+        target:
+          entity_id: button.aggiorna_serratura_porta_casa
+  - alias: Aggiorna stato serratura EQ3 quando in stato sconosciuto per min 5 minuti
+    trigger:
+      - platform: state
+        entity_id:
+          - binary_sensor.stato_batteria_serratura_porta_casa
+        for:
+          hours: 0
+          minutes: 5
+          seconds: 0
+        to: Unknown
+    action:
+      - service: button.press
+        data: {}
+        target:
+          entity_id: button.aggiorna_serratura_porta_casa
+  - alias: Notifica Batteria Scarica Serratura EQ3
+    trigger:
+        - platform: state
+          entity_id:
+            - binary_sensor.stato_batteria_serratura_porta_casa
+          to: "on"
+    action:
+      - service: persistent_notification.create
+        data_template:
+          message: La batteria della serratura della porta di casa è scarica, sostituirla il prima possibile
+          title: Attenzione
+          notification_id: "1101"

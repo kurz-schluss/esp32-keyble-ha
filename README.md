@@ -50,7 +50,7 @@ Step by step setup:
 - I recommend you to disable DHCP and give the bridge a static IP.
 - The ESP32 reboots, so you have to access it with the new given IP.
 - Follow the link and enter MQTT and KeyBLE credentials.
-- IMPORTANT: for direct use in home assistant use "eq3-bridge" as MQTT Topic
+- IMPORTANT: for direct use in home assistant use "homeassitant/lock/door" as MQTT Topic
 - IF YOU DO NOT HAVE KeyBLE credential you need the original QRCode in the eq3 box and a linux pc or raspberry where install via NPM command keyble package (info here https://github.com/oyooyo/keyble) and then use keyble-registeruser command.
 - After saving the credentials click on "Reset" to reboot.
 - You well be redirected to the main page of AutoConnect.
