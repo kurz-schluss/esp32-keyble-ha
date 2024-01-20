@@ -33,6 +33,7 @@ Some changes/additions made:
 - serial outputs in english
 - boot button on the ESP32 board toggles the lock
 - changed partion table
+- NTP time synchronization for the auto-lock function that can be configured via the app
 
 Step by step setup:
 
@@ -42,7 +43,6 @@ Step by step setup:
 - Connect to the ESP32's WiFi network.
 - By default the SSID is "KeyBLEBridge" with default password "eqivalock".
 - After you have connected to the network, go to 192.168.4.1 with you browser.
-- Login with default "admin"/"esp32"
 - At rootlevel you will just see a simple webpage.
 - Click on the gear to connect to your WiFi Network.
 - Now you will see the AutoConnect portal page.
@@ -50,7 +50,8 @@ Step by step setup:
 - AutoConnect scans for networks in reach, just choose the one you want to connect to.
 - I recommend you to disable DHCP and give the bridge a static IP.
 - The ESP32 reboots, so you have to access it with the new given IP.
-- Follow the link and enter MQTT and KeyBLE credentials.
+- Login with default "admin"/"esp32"
+- Enter MQTT, NTP server and KeyBLE credentials.
 - IMPORTANT: for direct use in home assistant use "homeassitant/lock/door" as MQTT Topic
 - IF YOU DO NOT HAVE KeyBLE credential you need the original QRCode in the eq3 box and a linux pc or raspberry where install via NPM command keyble package (info here https://github.com/oyooyo/keyble) and then use keyble-registeruser command.
 - After saving the credentials click on "Reset" to reboot.
