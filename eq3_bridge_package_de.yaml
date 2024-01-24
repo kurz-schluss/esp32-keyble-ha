@@ -41,7 +41,7 @@ mqtt:
       payload_press: "4"
       icon: mdi:location-enter
   sensor:
-    - name: Attività RAW Schloss Haustür
+    - name: Aktivität RAW Schloss Haustür
       state_topic: "homeassistant/lock/door/task"
       icon: mdi:home-lightning-bolt-outline
     - name: Signalstärke Schloss Haustür
@@ -51,63 +51,27 @@ mqtt:
 sensor:
   - platform: template
     sensors:
-      attivita_serratura_porta_casa:
-        friendly_name: "Attività Schloss Haustür"
+      zustand_schloss_haustur:
+        friendly_name: "Zustand Schloss Haustür"
         value_template: >-
-          {% if is_state('sensor.attivita_raw_serratura_porta_casa', 'waiting') %}
-            In attesa
-          {% elif is_state('sensor.attivita_raw_serratura_porta_casa', 'working') %}
-            Esecuzione comando
-          {% elif is_state('sensor.attivita_raw_serratura_porta_casa', 'unknown') %}
-            Stato sconosciuto
+          {% if is_state('sensor.aktivitat_raw_schloss_haustur', 'waiting') %}
+            Bereit
+          {% elif is_state('sensor.aktivitat_raw_schloss_haustur', 'working') %}
+            Kommando ausführen
+          {% elif is_state('sensor.aktivitat_raw_schloss_haustur', 'unknown') %}
+            Unbekannt
           {% else %}
-            {{ states('sensor.attivita_raw_serratura_porta_casa') }}
+            {{ states('sensor.aktivitat_raw_schloss_haustur') }}
           {% endif %}
         icon_template: >-
-          {% if is_state('sensor.attivita_raw_serratura_porta_casa', 'waiting') %}
+          {% if is_state('ssensor.aktivitat_raw_schloss_haustur', 'waiting') %}
             mdi:home-lightning-bolt-outline
-          {% elif is_state('sensor.attivita_raw_serratura_porta_casa', 'working') %}
+          {% elif is_state('sensor.aktivitat_raw_schloss_haustur', 'working') %}
             mdi:hammer
-          {% elif is_state('sensor.attivita_raw_serratura_porta_casa', 'unknown') %}
+          {% elif is_state('sensor.aktivitat_raw_schloss_haustur', 'unknown') %}
             mdi:help-circle
           {% else %}
             mdi:home
           {% endif %}
 
-automation:
-  - alias: Aggiorna stato serratura EQ3 all'avvio di Home Assistant
-    trigger:
-      - platform: homeassistant
-        event: start
-    action:
-      - service: button.press
-        data: {}
-        target:
-          entity_id: button.aggiorna_serratura_porta_casa
-  - alias: Aggiorna stato serratura EQ3 quando in stato sconosciuto per min 5 minuti
-    trigger:
-      - platform: state
-        entity_id:
-          - binary_sensor.stato_batteria_serratura_porta_casa
-        for:
-          hours: 0
-          minutes: 5
-          seconds: 0
-        to: Unknown
-    action:
-      - service: button.press
-        data: {}
-        target:
-          entity_id: button.aggiorna_serratura_porta_casa
-  - alias: Notifica Batteria Scarica Serratura EQ3
-    trigger:
-        - platform: state
-          entity_id:
-            - binary_sensor.stato_batteria_serratura_porta_casa
-          to: "on"
-    action:
-      - service: persistent_notification.create
-        data_template:
-          message: La batteria della serratura della porta di casa è scarica, sostituirla il prima possibile
-          title: Attenzione
-          notification_id: "1101"
+

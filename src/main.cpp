@@ -85,7 +85,7 @@ String KeyBleUserKey;
 String KeyBleUserId;
 String NTPServer ="pool.ntp.org";
 //Default timezone is Europe/Berlin
-String Timezone="CET-1CEST,M3.5.0,M10.5.0/3";
+String Timezone = "CET-1CEST,M3.5.0,M10.5.0/3";
 
 String mqtt_sub  = "";
 String mqtt_pub  = "";
@@ -160,11 +160,13 @@ static const char AUX_keyble_setting[] PROGMEM = R"raw(
       {
         "name": "NTPServer",
         "type": "ACInput",
+        "value": "",
         "label": "NTP Server"
       },      
       {
         "name": "Timezone",
         "type": "ACInput",
+        "value": "",
         "label": "Timezone"
       }, 
       {
@@ -227,10 +229,15 @@ void getParams(AutoConnectAux& aux) {
   KeyBleUserKey.trim();
   KeyBleUserId = aux["KeyBleUserId"].value;
   KeyBleUserId.trim();
-  NTPServer= aux["NTPServer"].value;
-  NTPServer.trim();
-  Timezone= aux["Timezone"].value;
-  Timezone.trim();
+  //If no value is stored, use default value
+  if (!(aux["NTPServer"].value.isEmpty())) {
+     NTPServer = aux["NTPServer"].value;
+     NTPServer.trim();
+  }
+  if (!(aux["Timezone"].value.isEmpty())) {
+    Timezone = aux["Timezone"].value;
+    Timezone.trim();
+  }  
  }
 // ---[loadParams]--------------------------------------------------------------
 String loadParams(AutoConnectAux& aux, PageArgument& args) {
@@ -260,7 +267,7 @@ String saveParams(AutoConnectAux& aux, PageArgument& args) {
   AutoConnectInput& mqttserver = keyble_setting["MqttServerName"].as<AutoConnectInput>();
 
   File param = FlashFS.open(PARAM_FILE, "w");
-  keyble_setting.saveElement(param, { "MqttServerName", "MqttPort", "MqttUserName", "MqttUserPass", "MqttTopic", "KeyBleMac", "KeyBleUserKey", "KeyBleUserId", "NTPServer" });
+  keyble_setting.saveElement(param, { "MqttServerName", "MqttPort", "MqttUserName", "MqttUserPass", "MqttTopic", "KeyBleMac", "KeyBleUserKey", "KeyBleUserId", "NTPServer", "Timezone" });
   param.close();
 
   AutoConnectText&  echo = aux["parameters"].as<AutoConnectText>();
@@ -480,6 +487,7 @@ void rootPage()
      "<h2 align=\"center\" style=\"color:green;margin:20px;\">KeyBLE last state: " + mqtt_pub + "</h2>"
      "<h2 align=\"center\" style=\"color:green;margin:20px;\">KeyBLE last task: " + mqtt_pub2 + "</h2>"
      "<h2 align=\"center\" style=\"color:green;margin:20px;\">NTP Server: " + NTPServer + "</h2>"
+     "<h2 align=\"center\" style=\"color:green;margin:20px;\">Timezone: " + Timezone + "</h2>"
      "<br>"
      "<h2 align=\"center\" style=\"color:blue;margin:20px;\">page refresh every 30 seconds</h2>";
   }
@@ -547,9 +555,9 @@ void SetupWifi()
 
 
 // Set the timezone
-void setTimezone(String timezone){
-  Serial.printf("  Setting Timezone to %s\n",timezone.c_str());
-  setenv("TZ",timezone.c_str(),1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
+void setTimezone(String tz){
+  Serial.printf("  Setting Timezone to %s\n",tz.c_str());
+  setenv("TZ",tz.c_str(),1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
   tzset();
 }
 
@@ -564,7 +572,8 @@ void initTime(String timezone){
     Serial.println("  Failed to obtain time");
     return;
   }
-  Serial.println("  Got the time from NTP");
+  Serial.print("  Got the time from NTP Server ");
+  Serial.println(NTPServer);
   // Now we can set the real timezone
   setTimezone(timezone);
 }
@@ -580,7 +589,6 @@ void printLocalTime(){
 
 // ---[Setup]-------------------------------------------------------------------
 void setup() {
-  struct tm timeinfo;
 
   delay(1000);
   Serial.begin(115200);
@@ -669,7 +677,7 @@ if (wifiActive)
   {
    Serial.println("# WiFi disconnected, reconnect...");
    SetupWifi();
-   //Resync internal RTC
+   //Update internal RTC
    initTime(Timezone);
   }
   else
