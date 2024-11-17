@@ -1,3 +1,164 @@
+### [1.4.2] Jan. 31, 2023
+
+#### Enhancements
+
+- Supports whileConnecting exit called while waiting for WiFi connection.
+- Added AutoConnect::portalStatus function.
+
+#### Fix
+
+- Fixed compilation error with ESP8266 Arduino Core 3.1.0 or later. 
+
+---
+### [1.4.1] Jan. 5, 2023
+
+#### Enhancements
+
+- Supports asynchronous communication of custom web pages using the Fetch API. This allows interaction with the user without page transitions. See the chapter [Interact between Sketch and AutoConnectElements](acinteract.md) for details.
+- Added the FetchLED example.
+- Added an AutoConnect::locate function.
+
+#### Fix
+
+- Fixed AutoConnectConfigBase constructor missing to AutoConnectConfigExt.
+
+---
+### [1.4.0] Nov. 20, 2022
+
+#### Enhancements
+
+- Custom web page related features were decoupled to allow for two different configurations, AutoConnectCore and AutoConnect. AutoConnectCore reduces memory consumption by focusing only on WiFi connectivity utilities. See [Reducing Binary Size](basicusage.md#reducing-binary-size) chapter in the AutoConnect documentation for more information.
+- Supports credentials backup and restoration.
+- Added an AutoConnect::getCurrentCredential function.
+- Added an AutoConnectAux::referer function.
+- Added an AutoConnectConfig::preserveIP setting.
+- Added the WebSocketServer example.
+- Allow navigate to a custom URL once a WiFi connection is established.
+- Revised mqttRSSI examples program structure.
+
+#### Fix
+
+- Fixed updateserver.py script security vulnerability.
+
+---
+### [1.3.7] Aug. 20, 2022
+
+#### Fix
+
+- Fixed an authentication failure in Captive Portal state.
+- Fixed loss of current SSID.
+
+---
+### [1.3.6] Jul. 26, 2022
+
+#### Fix
+
+- Fixed OTA being incomplete.
+
+---
+### [1.3.5] Jun. 03, 2022
+
+#### Fix
+
+- Fixed Fixed OTA exit not being called.
+- Fixed an ambiguous type call with IPAddress.
+- Fixed loss of response due to OTA session reset occurrence.
+- Made fit the mqttRSSI examples to ThingSpeak's updated channel authentication.
+
+!!! info "For ESP-IDF 4.4 with Arduino ESP32 Core"
+    AutoConnect 1.3.5 is the version compatible with both ESP-IDF 4.4 and ESP-IDF 3.3. It is recommended to use Arduino esp32 core 1.0.6 for ESP-IDF 3.3 based and Arduino esp32 core 2.0.3 or later for ESP-IDF 4.4 based.  
+    If you are using PlatformIO as your development platform, you can select any of these two versions by specifying them in **platformio.ini** file.
+    
+    - For ESP-IDF 4.4 with Arduino ESP32 Core 2.0.3
+    
+    ```ini
+    framework = arduino
+    platform = espressif32@4.4.0
+    ```
+    
+    - For ESO-IDF 3.3 with Arduino ESP32 Core 1.0.6
+    
+    ```ini
+    framework = arduino
+    platform = espressif32@3.5.0
+    ```
+
+---
+### [1.3.4] Mar. 02, 2022
+
+#### Enhancements
+
+- Supports [LittleFS_esp32](https://github.com/lorol/LITTLEFS) legacy library with ESP32 Arduino core 1.0.6 or less.
+- Added enablement of credentials removal function with Open SSIDs menu.
+- Migrate the CI platform to GitHub actions.
+
+#### Fix
+
+- Fixed AutoConnectOTA crashing if there is no OTA partition.
+- Fixed AutoConnectUpdate crashing if there is no OTA partition.
+
+---
+### [1.3.3] Jan. 25, 2022
+
+#### Fix
+
+- Fixed the missing initialization of MQTT parameter settings of mqttRSSI.ino example sketch.
+- Reverted the MQTT API endpoint of Thingspeak.com in the mqttRSSI example sketches.
+- Changed ESP32Cam XCLK to be attenuated to avoid interference with WiFi signals.
+
+---
+### [1.3.2] Jan. 1, 2022
+
+#### Enhancements
+
+- Supports an [AutoConnectRange](acelements.md#autoconnectrange) as a new AutoConnectElement.
+- Adds the [`responsive`](achandling.md#an-http-response-from-the-custom-web-page-handler) parameter with AutoConnectAux.
+- Adds an [`AutoConnectAux::redirect`](apiaux.md#redirect) function.
+- Adds an example for using AutoConnect with the [ESP32 camera driver](https://github.com/espressif/esp32-camera) as WebCamServer.
+
+#### Fix
+
+- Fixed an issue where a password is lost when SoftAP is stopped.
+
+---
+### [1.3.1] Oct. 09, 2021
+
+#### Fixes
+
+- Fixed an issue that was incompatible with ArduinoJson version 5.
+- Fixed LittleFS mount check not working with ESP32.
+- Fixed autoReconnect not being able to restore a static IP setting.
+- Fixed that static IP settings were not cleared when loading credential.
+
+---
+### [1.3.0] Sep. 25, 2021
+
+#### Enhancements
+
+- Supports ESP8266 3.0.0 Arduino core.
+- Supports ESP32 Arduino core 2.0.0.
+- Supports LittleFS with ESP32.
+- Supports AutoConnectOTA status notifications.
+- Supports AutoConnectConfigAux. (Preview)
+- Supports to save credentials always.
+- Adds a `style` attribute with AutoConnectInput.
+- Adds the `div` tag generation with the AutoConnectElement.
+- Adds `[]` operator with const char for AutoConnectAux.
+- Adds `[]` operator with `__FlashStringHelper` for AutoConnectAux.
+- Adds `AutoConnectAux::content` function to get a number of AutoConnectElements.
+- Adds `AutoConnect::getConfig` function to get an actual instance of AutoConnectConfig.
+
+#### Fixes
+
+- Fixed CSS attribute missing of AutoConnectInput with the number type.
+- Fixed garbage being mixed in a loaded credential.
+- Fixed the output place of Posterior attribute for AutoConnectRadio.
+- Improved the the calculation for the size of ArduinoJson document.
+- Fixed Incomplete deletion with AutoConnectCredential.
+- Fixed credentials not erased correctly.
+- Fixed AutoConnectText posterior being unavailable.
+
+---
 ### [1.2.3] Jan. 3, 2021
 
 #### Enhancements
@@ -5,7 +166,7 @@
 - Improved memory management.
 
 !!! note "PageBuilder v1.5.0 is required"
-    Since AutoConnect v1.2.3, [PageBuilder](https://github.com/Hieromon/PageBuilder) v1.5.0 or later is required. Please update PageBuilder latest.
+    Since AutoConnect v1.2.3, [PageBuilder](https://github.com/Hieromon/PageBuilder) v1.5.0 or later is required. Please update PageBuilder to latest version.
 
 ---
 ### [1.2.2] Dec. 13, 2020
@@ -202,7 +363,7 @@
 
 #### Fixes
 
-- Fixed the unable to get AutoConnectElemets values ​​in the sketch with ESP8266 arduino core 2.5.2.
+- Fixed the unable to get AutoConnectElemets values in the sketch with ESP8266 arduino core 2.5.2.
 
 ---
 ### [0.9.9] May 25, 2019

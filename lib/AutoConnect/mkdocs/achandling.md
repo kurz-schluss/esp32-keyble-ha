@@ -4,6 +4,249 @@ AutoConnectAux is the container for a custom Web page, AutoConnectElement is the
 
 AutoConnectElements declared in sketch must be programmed to add to AutoConnectAux one after another. Elements are automatically included in AutoConnectAux by AutoConnect if you load it from the JSON document. In either method, it is common to use the function of AutoConnectAux to access an element with a sketch.
 
+## Custom Web page handler programming model
+
+To handle Custom Web pages properly, the sketches need to implement to match the programming model. Custom Web page programming model is depicted as follows:
+
+<img src="images/aux_programing_model.svg">
+
+Custom Web page handler acts as an event handler for processing the HTTP request captured by the WebServer class. The WebServer class parses the HTTP request and calls the registered uri handler appropriately. The custom web page uri (it should be specified by the [JSON description](acjson.md#uri) for the custom web page, the [AutoConnectAux constructor](apiaux.md#autoconnectaux), or the [AutoConnect::on](achandling.md#when-setting-the-initial-values) function) is not registered directly with the WebServer class, and the Requests always go through the request dispatcher inside AutoConnect.
+
+When implementing the custom Web page handler, it is possible to give an appropriate function to the handler by understanding the above internal structure in advance. Custom web page handler can be sketched as regular function and has interface is as follows:
+
+```cpp
+String customWebpageHandler(AutoConnectAux& aux, PageArgument& args)
+```
+
+### <i class="fa fa-edit"></i> Parameters for the customWebageHandler
+
+When the custom web page handler is called, AutoConnect passes the following two parameters:
+
+#### 1. Reference to the AutoConnectAux instance
+
+Custom Web page handlers can access the AutoConnectElements owned by its page through a reference to the [AutoConnectAux](apiaux.md#autoconnectaux) instance. It can use this access to update the AutoConnectElements value before the user views the page or get the value of AutoConnectElements owned by the page that triggered the transition.
+
+A list of commonly used functions to access AutoConnectElements with your Sketch via reference to an AutoConnectAux instance is following:
+
+- `[]` operator : Access to an AutoConnectElement by specified element name.
+- `getElement` function : Access to an AutoConnectElement by specified element name.
+- `as<>` function : Cast from a variant of `AutoConnectElement` type to an actual type such as `AutoConnectText` or `AutoConnectInput` etc. To access attributes that exist only in the actual type, it is necessary to convert from the `AutoConnectElement` type obtained with `[]` operator or `getElement` function.
+
+See the section [Get AutoConnectElement from the AutoConnectAux](achandling.md#get-autoconnectelement-from-the-autoconnectaux) and the section [AutoConnectElements API](apielements.md) for usage examples and API specifications for each above function.
+
+#### 2. Reference to the PageArgument instance
+
+The values of the [AutoConnectCheckbox](acelements.md#autoconnectcheckbox), [AutoConnectFile](acelements.md#autoconnectfile), [AutoConnectInput](acelements.md#autoconnectinput), [AutoConnectRadio](acelements.md#autoconnectradio), and [AutoConnectSelect](acelements.md#autoconnectselect) elements are packed into the form data of the HTTP POST method by the page transition caused by [AutoConnectSubmit](acelements.md#autoconnectsubmit). Use the [PageArgument](https://github.com/Hieromon/PageBuilder#arguments-of-invoked-user-function) instance to retrieve the values of these transmitted AutoConnectElements with the customWebpageHandler. A list of commonly used functions to access PageArgment member variables with your Sketch via a reference to an PageArgument instance is following:
+
+- `arg` function : Get an element value by specified element name.
+- `hasArg` function : Checks for the existence of an element with the specified name.
+
+The method to get the form data attached to the HTTP request via PageArgument is described with the section [How you can reach the values](#how-you-can-reach-the-values).
+
+#### 3. Access to the AutoConnectElement values
+
+Here, you have one thing to note. The custom web page handler registered with [AutoConnect::on](achandling.md#when-setting-the-initial-values) function is called to respond to an HTTP request to the URL of its page. And, the AutoConnectAux instance then references the custom web page assigned to the requested URL. That is, the AutoConnectAux instance passed to the custom web page handler owns the AutoConnectElements for that page, while the PageArgument instance has the AutoConnectElements value of the custom web page that caused the page transition. You need to keep the difference between the two in mind when implementing the custom web page handler with your Sketch and access these values via the appropriate approach.
+
+You can access the AutoConnect Elements of the custom web page itself via the `AutoConnectAux&` argument by specifying the element name. You can also use the `PageArgument&` argument to get the value of AutoConnectElements for the page that caused the transition to that custom web page. (the URL that issued the HTTP request)
+
+The following screenshots are outputs of custom web pages that are based on a scenario to help you understand how to access AutoConnectElements properly with a custom web page handler. The requirements for this scenario are:
+
+- Calculate an addition simply, add `B` to `A`.
+- Perform the calculation with a customWebPageHandler.
+- Returns the calculated result in another custom web page with page transitions.
+
+<div style="display:inline-block">
+  <img src="images/adder.png" width="300px"> <img src="images/arrow_right.png" style="width:35px;margin-left:10px;margin-right:10px;vertical-align:100px"> <img src="images/answer.png" width="300px">
+</div>
+
+The first thing to work on is defining two custom web pages. Here, Value A and Value B are easily defined by applying [AutoConnectInput](acjson.md#acinput). Also, add an action button to perform the calculation with [AutoConnectSubmit](acjson.md#acsubmit).
+
+```json
+{
+  "uri": "/add",
+  "title": "Adder",
+  "menu": true,
+  "element": [
+    {
+      "name": "valueA",
+      "type": "ACInput",
+      "label": "Value A",
+      "apply": "number"
+    },
+    {
+      "name": "valueB",
+      "type": "ACInput",
+      "label": "Value B",
+      "apply": "number"
+    },
+    {
+      "name": "add",
+      "type": "ACSubmit",
+      "value": "ADD",
+      "uri": "/results"
+    }
+  ]
+}
+```
+
+Next, define an additional page to display the results. Here we use [AutoConnectText](acjson.md#actext) to display the calculation as a representation string of the expression. There is one thing to watch out for here. That is, the transition destination of the action button as `ADD` that accept the operand (it is specified by the `uri` of the ACSubmit element named "add") and the `uri` of the page that displays the answer are the same.
+
+```json
+{
+  "uri": "/results",
+  "title": "Adder",
+  "menu": false,
+  "element": [
+    {
+      "name": "results",
+      "type": "ACText"
+    }
+  ]
+}
+```
+
+When implementing a custom web page handler, it's usually a good idea to pre-determine the page design (which consists of the elements and layouts you want to use) for a better outlook when coding your Sketch. Especially when coding a custom web page handler, you need to specify the AutoConnectElements exactly, and it is recommended to implement it along the JSON defined earlier.
+
+After this, sketch the handlers for the above two custom web pages.
+
+First, the handler for the page allocated to `/add`. The role of this handler is to initialize the values respectively for the `valueA` and `valueB` input boxes. Both of these two input boxes are on the `/add` page, so the handler only references the `AutoConnectAux& aux` argument.
+
+You can use the `[]` operator with the element name like as `aux["valueA"]` to get a reference to an AutoConnectElement by name. Then, once the reference is converted to AutoConnectInput, the `value` member of AutoConnectInput can be accessed. Use the `as<AutoConnectInput>()` function to convert from the AutoConnectElement type to the actual AutoConnectInput type.
+
+```cpp
+String onAdd(AutoConnectAux& aux, PageArgument& args) {
+  aux["valueA"].as<AutoConnectInput>().value = "0";
+  aux["valueB"].as<AutoConnectInput>().value = "0";
+  return String();
+}
+```
+
+Next, the handler for the page allocated to `/results`. The role of this handler is to add the value B to A for the calculation. The `/results` page does not have an element that contains the operands Value A and Value B to calculate. Only the `/add` page has them. The `/results` page handler is called when ACSubmit on the `/add` page works, so `valueA` and `valueB` are included in the form data of the HTTP POST request to the `/results` page. That is, the handler for the `/results` page will get `valueA` and `valueB` from the `PageArgument& args` argument.
+
+```cpp
+String onResults(AutoConnectAux& aux, PageArgument& args) {
+  int valueA = args.arg("valueA").toInt();
+  int valueB = args.arg("valueB").toInt();
+
+  aux["results"].as<AutoConnectText>().value = String(valueA) + " + " + String(valueB) + " = " + String(valueA + valueB);
+  return String();
+}
+```
+
+[PageArgument](https://github.com/Hieromon/PageBuilder#arguments-of-invoked-user-function) is a built-in class in the [PageBuilder](https://github.com/Hieromon/PageBuilder) library. You can use the [PageArgument::arg](https://github.com/Hieromon/PageBuilder#string-pageargumentargstring-name) function to retrieve the parameters of the form data contained in the POST request by name. Since the `PageArgument::arg` function returns the parameters of the POSTed form data as a string, it converts Value A and Value B to the operand integer value of the addition via the `String::toInt()` function.
+
+```cpp
+int valueA = args.arg("valueA").toInt();
+int valueB = args.arg("valueB").toInt();
+```
+
+In this scenario, in addition to the calculation result, the calculation formula is also displayed on the result page.
+
+```cpp
+aux["results"].as<AutoConnectText>().value = String(valueA) + " + " + String(valueB) + " = " + String(valueA + valueB);
+```
+
+### <i class="fa fa-edit"></i> The customWebpageHandler return value
+
+The customWebpageHandler returns a string. The returned string is used internally by AutoConnect to temporarily qualify the HTML generating of the custom web page. AutoConnect typically calls a custom web page handler before HTML generation.
+
+When the customWebpageHandler returns an HTML string for qualification, it applies to the drawing area for the elements of AutoConnectElements. Additionally, you can then specify where the modifier HTML will be inserted. The **second parameter** of the [AutoConnectAux::on](apiaux.md#on) function, which allows the registration of custom web page handlers, indicates where to insert the modifier HTML. 
+
+The Sketch can specify the following three values for the second parameter of AutoConnectAux::on function:
+
+- **AC_EXIT_AHEAD** : Modifiers HTML returned by the custom Web page handler is inserted into the front of the list expansion of AutoConnectElements.
+
+- **AC_EXIT_LATER** : Modifiers HTML returned by the custom Web page handler is inserted into the back of the list expansion of AutoConnectElements.
+
+- **AC_EXIT_BOTH** : The customWebpageHandle will be called twice before and after list expansion of AutoConnectElements.
+
+A detailed description of the [AutoConnectAux::on](apiaux.md#on) function can be found in Section [AutoConnectAux API](apiaux.md).
+
+---
+
+The actual sketch code implemented following these steps above would look like this (case of ESP8266):
+
+```cpp
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <AutoConnect.h>
+
+const char PAGE_ADD[] PROGMEM = R"(
+{
+  "uri": "/add",
+  "title": "Adder",
+  "menu": true,
+  "element": [
+    {
+      "name": "valueA",
+      "type": "ACInput",
+      "label": "Value A",
+      "apply": "number"
+    },
+    {
+      "name": "valueB",
+      "type": "ACInput",
+      "label": "Value B",
+      "apply": "number"
+    },
+    {
+      "name": "add",
+      "type": "ACSubmit",
+      "value": "ADD",
+      "uri": "/results"
+    }
+  ]
+}
+)";
+
+const char PAGE_RESULTS[] PROGMEM = R"(
+{
+  "uri": "/results",
+  "title": "Adder",
+  "menu": false,
+  "element": [
+    {
+      "name": "results",
+      "type": "ACText"
+    }
+  ]
+}
+)";
+
+AutoConnect portal;
+AutoConnectAux  page_add;
+AutoConnectAux  page_results;
+
+String onAdd(AutoConnectAux& aux, PageArgument& args) {
+  aux["valueA"].as<AutoConnectInput>().value = "0";
+  aux["valueB"].as<AutoConnectInput>().value = "0";
+  return String();
+}
+
+String onResults(AutoConnectAux& aux, PageArgument& args) {
+  int valueA = args.arg("valueA").toInt();
+  int valueB = args.arg("valueB").toInt();
+
+  aux["results"].as<AutoConnectText>().value = String(valueA) + " + " + String(valueB) + " = " + String(valueA + valueB);
+  return String();
+}
+
+void setup() {
+  delay(1000);
+  page_add.load(PAGE_ADD);
+  page_results.load(PAGE_RESULTS);
+  portal.join({ page_add, page_results });
+  portal.on("/add", onAdd);
+  portal.on("/results", onResults);
+  portal.begin();
+}
+
+void loop() {
+  portal.handleClient();
+}
+```
+
 ## Handing AutoConnectElements with the Sketches
 
 The AutoConnectAux class has several functions to manipulate AutoConnectElements. The functions can add, delete, retrieve elements, and get and set values.
@@ -66,6 +309,14 @@ Similarly this, the uniqueness of the name is also necessary within the JSON doc
 ### <i class="fa fa-edit"></i> Get AutoConnectElement from the AutoConnectAux
 
 To retrieve an element from AutoConnectAux, use the getElement or getElements function. Normally, the getElement is needed when accessing the value of AutoConnectElement in the Sketch.
+
+```cpp
+AutoConnectElement* AutoConnectAux::getElement(const char* name)
+```
+
+```cpp
+AutoConnectElement* AutoConnectAux::getElement(const __FlashStringHelper* name)
+```
 
 ```cpp
 AutoConnectElement* AutoConnectAux::getElement(const String& name)
@@ -181,7 +432,7 @@ static const char AUX[] PROGMEM = R("
 AutoConnect    portal;
 AutoConnectAux page;
 
-String onPage(AutoConectAux& aux, PageArgument& args) {
+String onPage(AutoConnectAux& aux, PageArgument& args) {
   AutoConnectSubmit& send = aux["send"].as<AutoConnectSubmit>();
   if (WiFi.isConnected())
     send.enable = (WiFi.getMode() == WIFI_STA);
@@ -596,7 +847,31 @@ portal.on("/echo", [](AutoConnectAux& aux, PageArgument& args) {
 portal.begin();
 ```
 
-### <i class="fa fa-wrench"></i> Transfer of input values ​​across pages
+### <i class="fa fa-wrench"></i> Get AutoConnectElement values from the transition source
+
+Usually, the page transition called by the custom web page handler will have an HTTP request directed to the destination URL. Its HTTP request has parameters enclosed by the POST method, all of which are AutoConnectElements placed on the transition source page. On the other hand, the custom web page handler's first argument points to AutoConnectAux after the transition, so the handler cannot access the AutoConnectElement values placed at the transition source using the first argument.
+
+Custom Web paga handler has two ways to access AutoConnectElements placed on the transition source page: combining the [AutoConnect::where](api.md#where) and [AutoConnect::aux](api.md#aux) functions or using the [AutoConnectAux::referer](apiaux.md#referer) function. The following code snippet shows the difference between the two methods of identifying the `input1` AutoConnectInput with the `/echo` page handler after the transition based on the `/hello` page described above.
+
+```cpp hl_lines="2"
+portal.on("/echo", [](AutoConnectAux& aux, PageArgument& args) {
+  AutoConnectAux&   ac_hello = *portal.aux(portal.where());
+  AutoConnectInput& ac_input1 = ac_hello["input1"].as<AutoConnectInput>();
+  Serial.println(ac_input1.value);
+  return String();  
+});
+```
+
+```cpp hl_lines="2"
+portal.on("/echo", [](AutoConnectAux& aux, PageArgument& args) {
+  AutoConnectAux&   ac_hello = portal.referer();
+  AutoConnectInput& ac_input1 = ac_hello["input1"].as<AutoConnectInput>();
+  Serial.println(ac_input1.value);
+  return String();  
+});
+```
+
+### <i class="fa fa-wrench"></i> Transfer of input values across pages
 
 Since v1.0.0, AutoConnect supports a new attribute with each element that allows automatic transfer of input values across pages without sketching. AutoConnect will copy the input value of the elements declared as [global](apielements.md#global_2) to the same-named global elements on a different custom Web pages at the page transition timing.
 
@@ -796,7 +1071,7 @@ You can validate input data from [AutoConnectInput](apielements.md#autoconnectin
 
 You can also use the [AutoConnectAux::isValid](apiaux.md#isvalid) function to verify the data input to all [AutoConnectInput](apielements.md#autoconnectinput) elements on the custom Web page at once. The two sketches below show the difference between using [AutoConnectInput::isValid](apielements.md#isvalid) and using [AutoConnectAux::isValid](apiaux.md#isvalid). In both cases, it verifies the input data of the same AutoConnectInput, but in the case of using AutoConnectAux::isValid, the amount of sketch coding is small.
 
-**A common declaration**
+#### Common declaration
 
 ```cpp
 const char PAGE[] PROGMEM = R"(
@@ -822,7 +1097,7 @@ AutoConnectAux page;
 page.load(PAGE);
 ```
 
-**Using AutoConnectInput::isValid**
+#### Using AutoConnectInput::isValid
 
 ```cpp
 AutoConnectInput& input1 = page["input1"].as<AutoConnectInput>();
@@ -831,14 +1106,14 @@ if (!input1.isValid() || !input2.isValid())
   Serial.println("Validation error");
 ```
 
-**Using AutoConnectAux::isValid**
+#### Using AutoConnectAux::isValid
 
 ```cpp
 if (!page.isValid())
   Serial.println("Validation error");
 ```
 
-### <i class="fas fa-exchange-alt"></i> Convert data to actually type
+### <i class="fas fa-magic"></i> Convert data to actually type
 
 The values in the AutoConnectElements field of the custom Web page are all typed as String. A sketch needs to be converted to an actual data type if the data type required for sketch processing is not a String type. For the typical data type conversion method, refer to section [*Tips for data conversion*](datatips.md#convert-autoconnectelements-value-to-actual-data-type).
 
@@ -987,9 +1262,31 @@ And the action for calling the `multi()` function is the `=` labeled button as t
 !!! warning "JavaScript that is too long can cause insufficient memory"
     If it reaches thousands of bytes, AutoConnect will not be able to complete the HTML generation for the page.
 
+## Custom Web pages communication without page transitions
+
+The request-response form typically provided by AutoConnectAux is based on stateless HTTP page transitions. Its communication between custom Web pages and sketches involves page transitions in the client browser via the request-response form. However, major Web browsers support HTTP asynchronous communication without page transitions. By embedding those [Web APIs](https://developer.mozilla.org/en-US/docs/Web/API) in your custom Web pages, you can implement sketches that do not disrupt the user working flow with page transitions.
+
+There are two types of Web APIs that allow asynchronous communication that can be used with AutoConnectAux:
+
+- **XMLHttpRequest**
+
+    JavaScript embedded in a custom web page uses the [XMLHttpRequest](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest) (XHR) objects to communicate with the request handler on the sketch side. A sketch typically embeds its JavaScript coded as a string value with [AutoConnectElement](apielements.md#autoconnectelement) into a custom web page JSON description.
+
+    The request handler that is communication partner with the above JavaScript should be implemented in the sketch as the [Client request handlers](https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WebServer/README.rst#client-request-handlers) of the ESP8266WebServer (WebServer for ESP32) class.
+
+    The procedure for implementing a sketch in this manner is described in a [subsequent section](#communicate-with-the-sketch-using-xhr).
+
+- **Fetch API**
+
+    The [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch) supported by AutoConnectAux is even easy to implement than [XHR](https://developer.mozilla.org/en-US/docs/Glossary/XHR_(XMLHttpRequest)). AutoConnectElements can execute Fetch API-driven JavaScript that can communicate with the server sketch. Its script will be triggered by [expected events](acinteract.md#register-event-handling-for-autoconnectelements) and automatically be embedded into the HTML source of your custom web page by AutoConnect.
+
+    Also, the sketch process with which the above Fetch API script communicates can access and update the values and properties of each AutoConnectElement. Updated AutoConnectElement contents are immediately reflected on the custom web page by sending a response.
+
+    The Fetch API-driven approach based on AutoConnectElements event firing is described in the section of [Interact with sketches by AutoConnectElements event](#interact-with-sketches-by-autoconnectelements-event).
+
 ### <i class="fas fa-globe"></i> Communicate with the Sketch using XHR
 
-AutoConnectElement allows having scripts that create sessions based on [**XHR**](https://developer.mozilla.org/en-US/docs/Glossary/XHR_(XMLHttpRequest)). XMLHttpRequest (XHR) is a JavaScript API to create AJAX requests. Its methods provide the ability to send network requests between the browser and a server. The Sketch simply implements the server-side process as a response handler to a normal HTTP request and can equip with a dynamic custom Web page. This technique is tricky but does not cause page transitions and is useful for implementing dynamic pages. As a matter of fact, [AutoConnectOTA](otabrowser.md#updates-with-the-web-browserupdated-wv115) class is implemented by using this technique and is a custom Web page by AutoConnectAux.
+AutoConnectElement allows having scripts that make HTTP sessions based on [**XHR**](https://en.wikipedia.org/wiki/XMLHttpRequest). XHR ([XMLHttpRequest](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest)) is a JavaScript API to create AJAX requests. Its methods allow sending network requests between the browser and a server. The sketch implements the server-side process as a response handler to a standard HTTP request and can equip it with a dynamic custom Web page. This technique is tricky but is useful when implementing dynamic pages because it does not cause page transitions. As a matter of fact, [AutoConnectOTA](otabrowser.md#updates-with-the-web-browserupdated-wv115) class is implemented with this technique and is a custom web page by AutoConnectAux using XHR.
 
 Here's a simple example of JavaScript-based on XHR and a server-side request handler. It's like a clock that displays the time in real-time on an AutoConnect custom web page. The sketch in the following example is roughly divided into two structures.  
 The AutoConnectElement defined with the name `js` gets the server time with XHR and updates the response via the DOM with the AutoConnectText named `time` and substance is the following JavaScript:
@@ -998,23 +1295,23 @@ The AutoConnectElement defined with the name `js` gets the server time with XHR 
 var xhr;
 
 function clock() {
-    xhr.open('GET', '/clock');
-    xhr.responseType = 'text';
-    xhr.send();
+  xhr.open('GET', '/clock');
+  xhr.responseType = 'text';
+  xhr.send();
 }
 
 window.onclose = function() {
-    xhr.abort();
+  xhr.abort();
 };
 
 window.onload = function() {
-    xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-        if (this.readyState == 4 && xhr.status == 200) {
-            document.getElementById('time').innerHTML = this.responseText;
-        }
-    };
-    setInterval(clock, 1000);
+  xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = function() {
+    if (this.readyState == 4 && xhr.status == 200) {
+      document.getElementById('time').innerHTML = this.responseText;
+    }
+  };
+  setInterval(clock, 1000);
 };
 ```
 
@@ -1101,6 +1398,18 @@ void loop() {
 }
 ```
 
+### <i class="fas fa-exchange-alt"></i> Interact with sketches by AutoConnectElements event
+
+AutoConnectAux supports [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) besides [XMLHttpRequest](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest) for communication between the client browser and the ESP module. This allows your sketches to get and change values and properties of AutoConnectElements without a page transition on the browser. The changed values and properties are immediately reflected in the page currently being viewed in the browser.
+
+The following screenshot shows that a custom web page using the Fetch API can blink the LED on the ESP module without any page transitions. And it allows the custom web page changes the text color and button caption in sync with the LED flashing.
+
+<img data-gifffer="images/fetch_led.gif" data-gifffer-width="636" data-gifffer-height="290"/>
+
+The sketch implemented for the above demonstration does not need to write JavaScript code to handle the Fetch API. Its Fetch API script will automatically be embedded in the HTML source of your custom web page by AutoConnect. All you need to do is describe your custom web page in JSON and write AutoConnectElements event handlers to apply to user interaction. 
+
+How to sketch with the AutoConnectElements events is covered in detail in chapter [Interact with Sketch and AutoConnectElements](acinteract.md).
+
 ## Transitions of the custom Web pages
 
 ### Scope &amp; Lifetime of AutoConnectAux
@@ -1143,6 +1452,48 @@ void loop() {
 The transition of the custom Web page follows the URI of the page, but the ESP8266WebServer class does not know the URI of an AutoConnectAux page. (Registering a custom Web page does not use the *ESP8266WebServer::on*/*WebServer::on* function.) Therefore ESP8266WebServer class does not detect its URI access. If you want to detect an http request to AutoConnectAux's custom Web page, you need to register its URI with the [AutoConnectAux::on](apiaux.md#on) function.
 
 In addition to this, there are restrictions in the handler for the custom Web page as shown in the following section.
+
+### An HTTP response from the custom Web page handler
+
+Normally, a custom web page handler does not need to respond to a request from the client. Its HTTP response will be sent by AutoConnect when it returns from the custom web page handler. In that case, the HTTP response code is 200.
+
+However, this structure requires AutoConnectAux to always respond with the page content. If AutoConnectAux does not have page content as an HTTP response, then the custom web page handler can respond with its own HTTP response by following the steps:
+
+1. Declare an [AutoConnectAux](apiaux.md#autoconnectaux) with the `responsive` argument set to `false`, or describe `#!js "response":false` with JSON:
+
+    ```cpp
+    AutoConnectAux aux("/aux", "AUX", false, {}, false);
+    ```
+
+    ```json
+    {
+      "title": "AUX",
+      "uri": "/aux",
+      "response": false,
+      "menu": false
+    }
+    ```
+
+2. Send an HTTP response from a custom web page handler (Case of ESP32):
+
+    ```cpp
+    WebServer   server;
+    AutoConnect portal(server);
+
+    String handleAux(AutoConnectAux& aux, PageArgument& args) {
+      server.send(202, "text/plain", "Accepted");
+      return String();
+    }
+
+    portal.on("/aux", handleAux);
+    ```
+    If you want to respond with a [302](https://datatracker.ietf.org/doc/html/rfc7231#section-6.4.3) from a custom web page handler, you can use the [AutoConnectAux::redirect](apiaux.md#redirect) function.
+    ```cpp
+    String handleAux(AutoConnectAux& aux, PageArgument& args) {
+      aux.redirect("http://redirect.url:port/?query");
+      return String();
+    }
+    ```
 
 ### Limitations
 

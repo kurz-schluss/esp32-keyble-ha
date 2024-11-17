@@ -1,9 +1,9 @@
 /**
  * AutoConnectUpdate class implementation.
- * @file   AutoConnectUpdate.cpp
+ * @file AutoConnectUpdate.cpp
  * @author hieromon@gmail.com
- * @version    1.0.2
- * @date   2019-09-18
+ * @version 1.4.0
+ * @date 2022-07-25
  * @copyright  MIT license.
  */
 
@@ -82,6 +82,7 @@
 #if defined(ARDUINO_ARCH_ESP8266)
 using UpdateVariedClass = UpdaterClass;
 #elif defined(ARDUINO_ARCH_ESP32)
+#include <esp_ota_ops.h>
 using UpdateVariedClass = UpdateClass;
 #endif
 
@@ -104,15 +105,6 @@ typename std::enable_if<!AutoConnectUtil::has_func_onProgress<T>::value, AutoCon
 }
 
 /**
- * Definitions of notification commands to synchronize update processing
- * with the Web client.
- */
-#define UPDATE_NOTIFY_START     "#s"
-#define UPDATE_NOTIFY_PROGRESS  "#p"
-#define UPDATE_NOTIFY_END       "#e"
-#define UPDATE_NOTIFY_REBOOT    "#r"
-
-/**
  * A destructor. Release the update processing dialogue page generated
  * as AutoConnectAux.
  */
@@ -129,7 +121,7 @@ AutoConnectUpdateAct::~AutoConnectUpdateAct() {
  * the AutoConnect which is the bedrock of the process.
  * @param  portal   A reference of AutoConnect
  */
-void AutoConnectUpdateAct::attach(AutoConnect& portal) {
+void AutoConnectUpdateAct::attach(AutoConnectExt<AutoConnectConfigExt>& portal) {
   AutoConnectAux* updatePage;
 
   updatePage = new AutoConnectAux(String(FPSTR(_pageCatalog.uri)), String(FPSTR(_pageCatalog.title)), _pageCatalog.menu);
@@ -156,18 +148,18 @@ void AutoConnectUpdateAct::attach(AutoConnect& portal) {
   _dialog = AutoConnectUtil::onProgress<UpdateVariedClass>(Update, std::bind(&AutoConnectUpdateAct::_inProgress, this, std::placeholders::_1, std::placeholders::_2));
   // Adjust the client dialog pattern according to the callback validity
   // of the UpdateClass.
-  AutoConnectElement* loader = _auxProgress->getElement(String(F("loader")));
-  AutoConnectElement* progress_meter = _auxProgress->getElement(String(F("progress_meter")));
-  AutoConnectElement* progress_loader = _auxProgress->getElement(String(F("progress_loader")));
-  AutoConnectElement* enable_loader = _auxProgress->getElement(String(F("enable_loader")));
-  AutoConnectElement* inprogress_meter = _auxProgress->getElement(String(F("inprogress_meter")));
+  AutoConnectStyle&   loader = _auxProgress->getElement<AutoConnectStyle>(F("loader"));
+  AutoConnectElement* progress_meter = _auxProgress->getElement(F("progress_meter"));
+  AutoConnectElement* progress_loader = _auxProgress->getElement(F("progress_loader"));
+  AutoConnectElement* enable_loader = _auxProgress->getElement(F("enable_loader"));
+  AutoConnectElement* inprogress_meter = _auxProgress->getElement(F("inprogress_meter"));
   switch (_dialog) {
   case UPDATEDIALOG_LOADER:
     progress_meter->enable =false;
     inprogress_meter->enable = false;
     break;
   case UPDATEDIALOG_METER:
-    loader->enable = false;
+    loader.enable = false;
     progress_loader->enable =false;
     enable_loader->enable =false;
     break;
@@ -254,15 +246,29 @@ void AutoConnectUpdateAct::handleUpdate(void) {
  */
 AC_UPDATESTATUS_t AutoConnectUpdateAct::update(void) {
   // Start update
-  String  uriBin = uri + '/' + _binName;
+  String  uriBin = '/' + _binName;
+  if (uri != ".")
+    uriBin = uri + '/' + _binName;
   if (_binName.length()) {
     WiFiClient  wifiClient;
     AC_DBG("%s:%d/%s update in progress...", host.c_str(), port, uriBin.c_str());
-    t_httpUpdate_return ret = HTTPUpdateClass::update(wifiClient, host, port, uriBin);
+    t_httpUpdate_return ret;
+#ifdef ARDUINO_ARCH_ESP32
+    // Check if an available OTA partition exists.
+    const esp_partition_t*  runningPartition = esp_ota_get_running_partition();
+    const esp_partition_t*  otaPartition = esp_ota_get_next_update_partition(NULL);
+    if (!strcmp(runningPartition->label, otaPartition->label)) {
+      _errString = String(F("No available OTA partition"));
+      ret = HTTP_UPDATE_FAILED;
+    }
+    else
+#endif
+    if ((ret = HTTPUpdateClass::update(wifiClient, host, port, uriBin)) != HTTP_UPDATE_OK)
+      _errString = getLastErrorString();
     switch (ret) {
     case HTTP_UPDATE_FAILED:
       _status = UPDATE_FAIL;
-      AC_DBG_DUMB(" %s\n", getLastErrorString().c_str());
+      AC_DBG_DUMB(" %s\n", _errString.c_str());
       AC_DBG("update returns HTTP_UPDATE_FAILED\n");
       break;
     case HTTP_UPDATE_NO_UPDATES:
@@ -291,21 +297,22 @@ AC_UPDATESTATUS_t AutoConnectUpdateAct::update(void) {
  * received AutoConnectAux.
  * @param  aux        An instantiated AutoConnectAux that will configure according to ACPage_t.
  * @param  page       Pre-defined ACPage_t
- * @param  elementNum Number of AutoConnectElements to configure.  
+ * @param  elementNum Number of AutoConnectElements to configure.
  */
-void AutoConnectUpdateAct::_buildAux(AutoConnectAux* aux, const AutoConnectUpdateAct::ACPage_t* page, const size_t elementNum) {
+void AutoConnectUpdateAct::_buildAux(AutoConnectAux* aux, const AutoConnectAux::ACPage_t* page, const size_t elementNum) {
   for (size_t n = 0; n < elementNum; n++) {
     if (page->element[n].type == AC_Element) {
       AutoConnectElement* element = new AutoConnectElement;
       element->name = String(FPSTR(page->element[n].name));
       if (page->element[n].value)
         element->value = String(FPSTR(page->element[n].value));
-      aux->add(reinterpret_cast<AutoConnectElement&>(*element));
+      aux->add(*element);
     }
     else if (page->element[n].type == AC_Radio) {
       AutoConnectRadio* element = new AutoConnectRadio;
       element->name = String(FPSTR(page->element[n].name));
-      aux->add(reinterpret_cast<AutoConnectElement&>(*element));
+      element->post = AC_Tag_None;
+      aux->add(*element);
     }
     else if (page->element[n].type == AC_Submit) {
       AutoConnectSubmit* element = new AutoConnectSubmit;
@@ -314,7 +321,13 @@ void AutoConnectUpdateAct::_buildAux(AutoConnectAux* aux, const AutoConnectUpdat
         element->value = String(FPSTR(page->element[n].value));
       if (page->element[n].peculiar)
         element->uri = String(FPSTR(page->element[n].peculiar));
-      aux->add(reinterpret_cast<AutoConnectElement&>(*element));
+      aux->add(*element);
+    }
+    else if (page->element[n].type == AC_Style) {
+      AutoConnectStyle* element = new AutoConnectStyle;
+      element->name = String(FPSTR(page->element[n].name));
+      element->value = String(FPSTR(page->element[n].value));
+      aux->add(*element);
     }
     else if (page->element[n].type == AC_Text) {
       AutoConnectText* element = new AutoConnectText;
@@ -323,7 +336,7 @@ void AutoConnectUpdateAct::_buildAux(AutoConnectAux* aux, const AutoConnectUpdat
         element->value = String(FPSTR(page->element[n].value));
       if (page->element[n].peculiar)
         element->format = String(FPSTR(page->element[n].peculiar));
-      aux->add(reinterpret_cast<AutoConnectText&>(*element));
+      aux->add(*element);
     }
   }
 }
@@ -359,9 +372,9 @@ String AutoConnectUpdateAct::_onCatalog(AutoConnectAux& catalog, PageArgument& a
 
   // Reallocate available firmwares list.
   _binName = String("");
-  AutoConnectText&  caption = catalog.getElement<AutoConnectText>(String(F("caption")));
-  AutoConnectRadio& firmwares = catalog.getElement<AutoConnectRadio>(String(F("firmwares")));
-  AutoConnectSubmit&  submit = catalog.getElement<AutoConnectSubmit>(String(F("update")));
+  AutoConnectText&  caption = catalog.getElement<AutoConnectText>(F("caption"));
+  AutoConnectRadio& firmwares = catalog.getElement<AutoConnectRadio>(F("firmwares"));
+  AutoConnectSubmit&  submit = catalog.getElement<AutoConnectSubmit>(F("update"));
   firmwares.empty();
   firmwares.tags.clear();
   submit.enable = false;
@@ -464,10 +477,10 @@ String AutoConnectUpdateAct::_onUpdate(AutoConnectAux& progress, PageArgument& a
   AC_UNUSED(args);
 
   // Constructs the dialog page.
-  AutoConnectElement* binName = progress.getElement(String(F("binname")));
-  _binName = _auxCatalog->getElement<AutoConnectRadio>(String(F("firmwares"))).value();
+  AutoConnectElement* binName = progress.getElement(F("binname"));
+  _binName = _auxCatalog->getElement<AutoConnectRadio>(F("firmwares")).value();
   binName->value = _binName;
-  AutoConnectElement* url = progress.getElement(String("url"));
+  AutoConnectElement* url = progress.getElement(F("url"));
   url->value = host + ':' + port;
   return String("");
 }
@@ -493,7 +506,7 @@ String AutoConnectUpdateAct::_onResult(AutoConnectAux& result, PageArgument& arg
     break;
   case UPDATE_FAIL:
     resForm = String(F(" failed."));
-    resForm += String(F("<br>")) + getLastErrorString();
+    resForm += String(F("<br>")) + _errString;
     resColor = String(F("red"));
     break;
   default:
@@ -501,10 +514,11 @@ String AutoConnectUpdateAct::_onResult(AutoConnectAux& result, PageArgument& arg
     resColor = String(F("red"));
     break;
   }
-  AutoConnectText& resultElm = result.getElement<AutoConnectText>(String(F("status")));
+  AutoConnectText& resultElm = result.getElement<AutoConnectText>(F("status"));
   resultElm.value = _binName + resForm;
   resultElm.style = String(F("font-size:120%;color:")) + resColor;
-  result.getElement<AutoConnectElement>(String(F("restart"))).enable = restart;
+  result.getElement<AutoConnectElement>(F("restart")).enable = restart;
+  _errString.clear();
 
   return String("");
 }
@@ -532,7 +546,7 @@ void AutoConnectUpdateAct::_progress(void) {
     reqOperand = _webServer->arg(reqOperation);
     switch (_status) {
     case UPDATE_IDLE:
-      if (reqOperand == String(UPDATE_NOTIFY_START)) {
+      if (reqOperand == String(AUTOCONNECT_UPDATE_NOTIFY_START)) {
         httpCode = 200;
         _status = UPDATE_START;
       }
@@ -542,7 +556,7 @@ void AutoConnectUpdateAct::_progress(void) {
       }
       break;
     case UPDATE_SUCCESS:
-      if (reqOperand == String(UPDATE_NOTIFY_REBOOT)) {
+      if (reqOperand == String(AUTOCONNECT_UPDATE_NOTIFY_REBOOT)) {
         _status = UPDATE_RESET;
         httpCode = 200;
       }
@@ -560,14 +574,14 @@ void AutoConnectUpdateAct::_progress(void) {
   case HTTP_GET:
     switch (_status) {
     case UPDATE_PROGRESS:
-      payload = String(UPDATE_NOTIFY_PROGRESS) + ',' + String(_amount) + ':' + String(_binSize); 
+      payload = String(AUTOCONNECT_UPDATE_NOTIFY_PROGRESS) + ',' + String(_amount) + ':' + String(_binSize);
       httpCode = 200;
       break;
     case UPDATE_IDLE:
     case UPDATE_SUCCESS:
     case UPDATE_NOAVAIL:
     case UPDATE_FAIL:
-      payload = String(UPDATE_NOTIFY_END);
+      payload = String(AUTOCONNECT_UPDATE_NOTIFY_END);
       httpCode = 200;
       break;
     default:

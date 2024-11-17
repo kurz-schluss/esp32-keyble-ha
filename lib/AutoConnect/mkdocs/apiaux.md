@@ -1,9 +1,12 @@
+!!! info "Only for AutoConnect"
+    The following AutoConnectAux API are valid only for AutoConnect; they are not available for [AutoConnectCore](basicusage.md#using-autoconnectcore-without-custom-web-pages-and-ota-update-facilities).
+
 ## <i class="fa fa-code"></i> Constructor
 
 ### AutoConnectAux
 
 ```cpp
-AutoConnectAux(const String& uri = String(""), const String& title = String(""), const bool menu = true, const AutoConnectElementVT addons = AutoConnectElementVT())
+AutoConnectAux(const String& uri = String(""), const String& title = String(""), const bool menu = true, const AutoConnectElementVT addons = AutoConnectElementVT(), const bool responsive = true, const bool CORS = false)
 ```
 
 <dl class="apidl">
@@ -11,13 +14,23 @@ AutoConnectAux(const String& uri = String(""), const String& title = String(""),
     <dd><span class="apidef">uri</span><span class="apidesc">URI of this custom Web Page.</span></dd>
     <dd><span class="apidef">title</span><span class="apidesc">Page title of this custom Web page. It will appear on the auto connection menu and at the top of that page.</span></dd>
     <dd><span class="apidef">menu</span><span class="apidesc">Specifies whether to display this page on menu.</span></dd>
-    <dd><span class="apidef">addons</span><span class="apidesc">Reference to AutoConnectElement collection.</span></dt>
+    <dd><span class="apidef">addons</span><span class="apidesc">Reference to AutoConnectElement collection.</span></dd>
+    <dd><span class="apidef">responsive</span><span class="apidesc">Specifies whether to make HTTP response or not.</span></dd>
+    <dd><span class="apidef">CORS</span><span class="apidesc">Include <code>Access-Control-Allow-Origin:*</code> in the HTTP response headers of the custom web page. This indicates that the response can be shared.</span></dd>
 </dl>
 
 ## <i class="fa fa-code"></i> Public member functions
 
 ### <i class="fa fa-caret-right"></i> operator [ ]
 
+```cpp
+AutoConnectElement& operator[](const char* name)
+```
+<p></p>
+```cpp
+AutoConnectElement& operator[](const __FlashStringHelper* name)
+```
+<p></p>
 ```cpp
 AutoConnectElement& operator[](const String& name)
 ```
@@ -44,7 +57,7 @@ Add an element to the AutoConnectAux. An added element is displayed on the custo
 ### <i class="fa fa-caret-right"></i> authentication
 
 ```cpp
-void  authentication(const AC_AUTH_t auth)
+void authentication(const AC_AUTH_t auth)
 ```
 
 Set to require authentication with access to a page. When you access a page that requires authentication, HTTP authentication will be performed according to the scheme specified with the auth parameter.<dl class="apidl">
@@ -54,6 +67,15 @@ Set to require authentication with access to a page. When you access a page that
 - **AC_AUTH_BASIC** : Basic scheme.
 - **AC_AUTH_DIGEST** : Digest scheme.
     </span></dd></dl>
+
+### <i class="fa fa-caret-right"></i> content
+
+```cpp
+size_t content(void)
+```
+
+Returns the number of AutoConnectElements the AutoConnectAux contains.<dl class="apidl">
+    <dt>**Return value**</dt><dd>A number of the registered AutoConnectElements.</dd></dl>
 
 ### <i class="fa fa-caret-right"></i> fetchElement
 
@@ -66,6 +88,14 @@ Retrieve the values of the AutoConnectElements on the custom Web page. Refer to 
 
 ```cpp
 T& getElement<T>(const String& name)
+```
+<p></p>
+```cpp
+AutoConnectElement* getElement(const char* name)
+```
+<p></p>
+```cpp
+AutoConnectElement* getElement(const __FlashStringHelper* name)
 ```
 <p></p>
 ```cpp
@@ -231,6 +261,10 @@ Set or reset the display as menu item for this AutoConnectAux. This function pro
     <dd><span class="apidef">true</span><span class="apidesc">Show on the menu.</span></dd>
     <dd><span class="apidef">false</span><span class="apidesc">Hidden on the menu.</span></dd></dl>
 
+!!! note "AutoConnectAux::menu and isMenu have no effect on AutoConnect built-in menu items"
+    Some of AutoConnect's built-in pages make use of AutoConnectAux class. You can use the [AutoConnect::aux](api.md#aux) or [AutoConnect::locate](api.md#locate) function with those URLs to retrieve the AutoConnectAux for built-in pages, but the [menu](apiaux.md#menu) function does not show/hide the [built-in items](menu.md#right-on-top) of the menu list.    
+    Also, it is not recommended to use [AutoConnect::aux](api.md#aux) or [locate](api.md#locate) functions to get AutoConnect's built-in pages. Instructions on how to show/hide AutoConnect's built-in menu items can be found in the [Applying the active menu items](menu.md#applying-the-active-menu-items) section.
+
 ### <i class="fa fa-caret-right"></i> on
 
 ```cpp
@@ -279,6 +313,26 @@ typedef struct {
 
 </p>Refer to '[To upload to a device other than Flash or SD](acupload.md#to-upload-to-a-device-other-than-flash-or-sd)' in section [appendix](acupload.md) for details.</span></dd></dl>
 
+### <i class="fa fa-caret-right"></i> redirect
+
+```cpp
+void redirect(const char* url)
+```
+
+Generate a [Location](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Location) header field with the specified `url` and responds with a [302](https://datatracker.ietf.org/doc/html/rfc7231#section-6.4.3) response code to the client. This function is intended to be used from within the Custom Web Page handler. If the AutoConnectAux is going to redirect to another page without responding with page content, declare the `responsive` argument `false` in the [AutoConnectAux constructor](#autoconnectaux). With this construction, AutoConnectAux will not respond to HTTP responses. The `redirect` function can be useful in this situation to respond to a 302 redirect.<dl class="apidl">
+    <dt>**Parameter**</dt>
+    <dd><span class="apidef">url</span><span class="apidesc">Specifies the URL to redirect a page to.</span></dd></dl>
+
+### <i class="fa fa-caret-right"></i> referer
+
+```cpp
+AutoConnectAux& referer(void)
+```
+
+Returns a reference to the AutoConnectAux from which this AutoConnectAux was called.<dl class="apidl">
+    <dt>**Return value**</dt>
+    <dd>A reference to the AutoConnectAux from which this AutoConnectAux was called. If the source of the transition is not an AutoConnectAux page, it returns a reference to itself.</dd></dl>
+
 ### <i class="fa fa-caret-right"></i> release
 
 ```cpp
@@ -321,7 +375,7 @@ bool setElementValue(const String& name, const String value)
 bool setElementValue(const String& name, std::vector<String> const& values)
 ```
 
-Sets the value of the specified AutoConnectElement. If values ​​is specified as a *std::vector* of String, the element that can set the values is the [AutoConnectRadio](apielements.md#autoconnectradio) or the [AutoConnectSelect](apielements.md#autoconnectselect). <dl class="apidl">
+Sets the value of the specified AutoConnectElement. If values is specified as a *std::vector* of String, the element that can set the values is the [AutoConnectRadio](apielements.md#autoconnectradio) or the [AutoConnectSelect](apielements.md#autoconnectselect). <dl class="apidl">
     <dt>**Parameters**</dt>
     <dd><span class="apidef">name</span><span class="apidesc">Specifies the name of the AutoConnectElements that you want to set the value.</span></dd>
     <dd><span class="apidef">value</span><span class="apidesc">Specifies the value to be set.</span></dd>

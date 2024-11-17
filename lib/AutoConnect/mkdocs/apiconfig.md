@@ -1,6 +1,12 @@
+The AutoConnectConfig class does not present some members regarding custom web page features due to differences in the AutoConnect component used in the sketch.
+
+Sketch allows by including either `AutoConnect.h` or `AutoConnectCore.h` header file to use the AutoConnect library. If you include the `AutoConnectCore.h` with the sketch, AutoConnect will drop the functions involved custom web page facility. And correspondingly, some members that depend on custom web page functions will omit from the AutoConnectConfig class. See the [Reducing Binary Size](basicusage.md#reducing-binary-size) chapter for details.
+
 ## <i class="fa fa-code"></i> Constructor
 
 ### AutoConnectConfig
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 ```cpp
 AutoConnectConfig()
@@ -30,17 +36,23 @@ AutoConnectConfig(const char* ap, const char* password, const unsigned long time
 
 ### <i class="fa fa-caret-right"></i> apid
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 SoftAP's SSID.<dl class="apidl">
     <dt>**Type**</dt>
     <dd><span class="apidef">String</span><span class="apidesc">The default value is **esp8266ap** for ESP8266, **esp32ap** for ESP32.</span></dd></dl>
 
 ### <i class="fa fa-caret-right"></i> apip
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Sets IP address for Soft AP in captive portal. When AutoConnect fails the initial WiFi.begin, it starts the captive portal with the IP address specified this.<dl class="apidl">
     <dt>**Type**</dt>
     <dd><span class="apidef">IPAddress</span><span class="apidesc">The default value is **172.217.28.1**</span></dd></dl>
 
 ### <i class="fa fa-caret-right"></i> auth
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Apply HTTP authentication with the AutoConnect web page. This This setting allows the Sketch to authenticate with "BASIC" or "DIGEST" scheme. It is given as an enumeration value of **AC_AUTH_t** that indicates the authentication scheme.  
 This setting determines the default scheme for HTTP authentication with AutoConnect. When the [**AutoConnectConfig::authScope**](#authscope) is **AC_AUTHSCOPE_PARTIAL**, each [AutoConnectAux authentication](apiaux.md#authentication) scheme has priority.<dl class="apidl">
@@ -52,6 +64,8 @@ This setting determines the default scheme for HTTP authentication with AutoConn
     <dd><span class="apidef">AC_AUTH_BASIC</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Use the [basic scheme](https://tools.ietf.org/html/rfc2617#section-2).</span></dd></dl>
 
 ### <i class="fa fa-caret-right"></i> authScope
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Specifies the authentication scope of AutoConnect Web pages. The Sketch will be able to expand or narrow the range of authentication by this setting, which can be either as **AC_AUTHSCOPE_t** enumeration value.<dl class="apidl">
     <dt>**Type**</dt>
@@ -69,6 +83,8 @@ Also, the authScope setting has another bit that indicates to allow authenticati
     <dd><span class="apidef">AC_AUTHSCOPE_WITHCP</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Allow authentication with the captive portal state. This value cannot be used alone to declare an authentication scope. It indicates to enable authentication in the captive portal by the logical OR operator with one of the AC_AUTHSCOPE_t values above.</span></dd></dl>
 
 ### <i class="fa fa-caret-right"></i> autoReconnect
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Automatically will try to reconnect with the past established access point (BSSID) when the current configured SSID in ESP8266/ESP32 could not be connected. By enabling this option, *AutoConnect::begin()* function will attempt to reconnect to a known access point using credentials stored in the flash, even if the connection failed by current SSID.  
 If the connection fails, starts the captive portal in SoftAP+STA mode.<dl class="apidl">
@@ -95,6 +111,8 @@ When the autoReconnect option is enabled, an automatic connection will behave if
 
 ### <i class="fa fa-caret-right"></i> autoReset
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Reset ESP8266 module automatically after WLAN disconnected.<dl class="apidl">
     <dt>**Type**</dt>
     <dd>bool</dd>
@@ -103,6 +121,8 @@ Reset ESP8266 module automatically after WLAN disconnected.<dl class="apidl">
     <dd><span class="apidef">false</span><span class="apidesc">No reset.</span></dd></dl>
 
 ### <i class="fa fa-caret-right"></i> autoRise
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Captive portal activation switch. False for disabling the captive portal. It prevents starting the captive portal even if the connection at the 1st-WiFi.begin fails.<dl class="apidl">
     <dt>**Type**</dt>
@@ -113,21 +133,28 @@ Captive portal activation switch. False for disabling the captive portal. It pre
 
 ### <i class="fa fa-caret-right"></i> autoSave
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 The credential saved automatically at the connection establishment.<dl class="apidl">
     <dt>**Type**</dt>
     <dd>AC_SAVECREDENTIAL_t</dd>
     <dt>**Value**</dt>
     <dd><span class="apidef">AC_SAVECREDENTIAL_AUTO</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">The credential saved automatically. This is the default.</span></dd>
+    <dd><span class="apidef">AC_SAVECREDENTIAL_ALWAYS</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Save specified SSID and Password always even if a specified credential has been rejected.</span></dd>
     <dd><span class="apidef">AC_SAVECREDENTIAL_NEVER</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">The credential no saved.</span></dd></dl>
 
 ### <i class="fa fa-caret-right"></i> beginTimeout
 
-Specify the limit time to attempt WiFi connection to the accesspoint. AutoConnect uses this value to abort the connection attempt at **WiFi.begin**. Its actual value specified in milliseconds unit.  
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
+Specify the limit time to attempt WiFi connection to the access point. AutoConnect uses this value to abort the connection attempt at **WiFi.begin**. Its actual value specified in milliseconds unit.  
 The default value is `AUTOCONNECT_TIMEOUT` defined in [`AutoConnectDefs.h`](https://github.com/Hieromon/AutoConnect/blob/master/src/AutoConnectDefs.h#L132) and the initial value is 30 seconds.<dl class="apidl">
     <dt>**Type**</dt>
     <dd>unsigned long</dd></dl>
 
 ### <i class="fa fa-caret-right"></i> bootUri
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Specify the location to be redirected after module reset in the AutoConnect menu. It is given as an enumeration value of **AC_ONBOOTURI_t** indicating either the AutoConnect root path or the user screen home path.<dl class="apidl">
     <dt>**Type**</dt>
@@ -137,6 +164,8 @@ Specify the location to be redirected after module reset in the AutoConnect menu
     <dd><span class="apidef">AC_ONBOOTURI_HOME</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">It is redirected to the URI specified by [**AutoConnectConfig::homeUri**](apiconfig.md#homeuri).</span></dd></dl>
 
 ### <i class="fa fa-caret-right"></i> boundaryOffset
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Sets the offset address of the credential storage area for EEPROM. This value must be between greater than 4 and less than flash sector size. (4096 by SDK)  
 The default value is 0.  
@@ -149,6 +178,8 @@ This option is valid only for ESP8266 or ESP32 arduino core 1.0.2 earlier.<dl cl
 
 ### <i class="fa fa-caret-right"></i> channel
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 The channel number of WIFi when SoftAP starts.<dl class="apidl">
     <dt>**Type**</dt>
     <dd>uint8_t</dd>
@@ -160,11 +191,15 @@ The channel number of WIFi when SoftAP starts.<dl class="apidl">
 
 ### <i class="fa fa-caret-right"></i> dns1
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Set primary DNS server address when using static IP address.<dl class="apidl">
     <dt>**Type**</dt>
     <dd>IPAddress</dd></dl>
 
 ### <i class="fa fa-caret-right"></i> dns2
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Set secondary DNS server address when using static IP address.<dl class="apidl">
     <dt>**Type**</dt>
@@ -172,11 +207,15 @@ Set secondary DNS server address when using static IP address.<dl class="apidl">
 
 ### <i class="fa fa-caret-right"></i> gateway
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Sets gateway address for Soft AP in captive portal. When AutoConnect fails the initial WiFi.begin, it starts the captive portal with the IP address specified this.<dl class="apidl">
     <dt>**Type**</dt>
     <dd><span class="apidef">IPAddress</span><span class="apidesc">The default value is **172.217.28.1**</span></dd></dl>
 
 ### <i class="fa fa-caret-right"></i> hidden
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Sets SoftAP to hidden SSID.<dl class="apidl">
     <dt>**Type**</dt>
@@ -187,17 +226,23 @@ Sets SoftAP to hidden SSID.<dl class="apidl">
 
 ### <i class="fa fa-caret-right"></i> homeUri
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Sets the home path of user sketch. This path would be linked from 'HOME' in the AutoConnect menu. The default for homeUri is "/".<dl class="apidl">
     <dt>**Type**</dt>
     <dd>String</dd></dl>
 
 ### <i class="fa fa-caret-right"></i> hostName
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Sets the station host name of ESP8266/ESP32.<dl class="apidl">
     <dt>**Type**</dt>
     <dd>String</dd></dl>
 
 ### <i class="fa fa-caret-right"></i> immediateStart
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Disable the 1st-WiFi.begin and start the captive portal. If this option is enabled, the module will be in AP_STA mode and the captive portal. The evaluation rank of this parameter is lower than the [**AutoConnectConfig::autoRise**](apiconfig.md#autorise). Even if immediateStart is true, the captive portal will not launch if autoRise is false.<dl class="apidl">
     <dt>**Type**</dt>
@@ -208,6 +253,8 @@ Disable the 1st-WiFi.begin and start the captive portal. If this option is enabl
 
 ### <i class="fa fa-caret-right"></i> menuItems
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Configure applying items of the [AutoConnect menu](menu.md). You can arbitrarily combine valid menus by coordinating the menuItems value.<dl class="apidl">
     <dt>**Type**</dt>
     <dd><span class="apidef">uint16_t</span><span class="apidesc">It provides the combined **AC_MENUITEM_t** value of the item to apply to the AutoConnect menu.<br>Specify the value calculated from the **logical OR** by the AC_MENUITEM_t value of each item applied as a menu.  It affects not only disappear the items from the menu also invalidates the URI they have. As a consequence, even if it accesses the URL directly will occur a 404 error.<br>The default value is logical OR of AC_MENUITEM_CONFIGNEW, AC_MENUITEM_OPENSSIDS, AC_MENUITEM_DISCONNECT, AC_MENUITEM_RESET, AC_MENUITEM_UPDATE and AC_MENUITEM_HOME.</span></dd>
@@ -217,19 +264,33 @@ Configure applying items of the [AutoConnect menu](menu.md). You can arbitrarily
     <dd><span class="apidef">AC_MENUITEM_OPENSSIDS</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Appends [Open SSIDs](menu.md#open-ssids) item.</span></dd>
     <dd><span class="apidef">AC_MENUITEM_DISCONNECT</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Appends [Disconnect](menu.md#disconnect) item.</span></dd>
     <dd><span class="apidef">AC_MENUITEM_RESET</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Appends [Reset...](menu.md#reset) item.</span></dd>
-    <dd><span class="apidef">AC_MENUITEM_UPDATE</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Appends [Update](menu.md#update) item.</span></dd>
+    <dd><span class="apidef">AC_MENUITEM_UPDATE</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Appends [Update](menu.md#update) item. This value is valid only for AutoConnect; it is not available for AutoConnectCore. </span></dd>
     <dd><span class="apidef">AC_MENUITEM_HOME</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Appends [HOME](menu.md#home) item.</span></dd>
-    <dd><span class="apidef">AC_MENUITEM_DEVINFO</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Appends the **Device info** item which links to [AutoConnect statistics page](menu.md##where-the-from).</span></dd></dl>
+    <dd><span class="apidef">AC_MENUITEM_DEVINFO</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Appends the **Device info** item which links to [AutoConnect statistics page](menu.md##where-the-from).</span></dd>
+    <dd><span class="apidef">AC_MENUITEM_DELETESSID</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Enables the ability to interactively delete credentials on the [Open SSIDs](menu.md#open-ssids) menu screen.</span></dd></dl>
 
 !!! info "How to specify the value of the menu items"
     An menuItems accepts the logical OR of AC_MENUITEM_t type value. For example, to enable only Open SSIDs and HOME items, specify:
     ```cpp
+    AutoConnect portal;
     AutoConnectConfig config;
+
     config.menuItems = AC_MENUITEM_OPENSSIDS | AC_MENUITEM_HOME;
+    portal.config(config);
+    ```
+    Also, to enable the credentials removal feature, follow these settings procedures.
+    ```cpp
+    AutoConnect portal;
+    AutoConnectConfig config;
+
+    config.menuItems = config.menuItems | AC_MENUITEM_DELETESSID;
+    portal.config(config);
     ```
     However, even if you specify like the above, the AutoConnectAux page items still display on the menu. To remove the AutoConnectAux items, use the [AutoConnectAux::menu](apiaux.md#menu) function.
 
 ### <i class="fa fa-caret-right"></i> minRSSI
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Specify the lower limit of the WiFi signal strength allowed to use as an access point. This value should be greater than -120 as RSSI. Generally, a data link will not be established unless it exceeds -90 dBm. Also, packet transmission is not reliable below -70 dBm to -80 dBm.<dl class="apidl">
     <dt>**Type**</dt>
@@ -237,11 +298,15 @@ Specify the lower limit of the WiFi signal strength allowed to use as an access 
 
 ### <i class="fa fa-caret-right"></i> netmask
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Sets subnet mask for Soft AP in captive portal. When AutoConnect fails the initial WiFi.begin, it starts the captive portal with the IP address specified this.<dl class="apidl">
     <dt>**Type**</dt>
     <dd><span class="apidef">IPAddress</span><span class="apidesc">The default value is **255.255.255.0**</span></dd></dl>
 
 ### <i class="fa fa-caret-right"></i> ota
+
+<p class="badge"><img src="images/tag_ac.png"></p>
 
 Specifies to import the built-in OTA update class into the Sketch. When this option is enabled, an **Update** item will appear in the AutoConnect menu, and the OTA update via Web browser will be automatically embedded to the Sketch.<dl class="apidl">
     <dt>**Type**</dt>
@@ -250,7 +315,17 @@ Specifies to import the built-in OTA update class into the Sketch. When this opt
     <dd><span class="apidef">AC_OTA_EXTRA</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">AutoConnect does not import AutoConnectOTA. This is the default.</span></dd>
     <dd><span class="apidef">AC_OTA_BUILTIN</span><span class="apidesc"></span><span class="apidef">&nbsp;</span><span class="apidesc">Specifies to include AutoConnectOTA in the Sketch.</span></dd></dl>
 
+### <i class="fa fa-caret-right"></i> otaExtraCaption
+
+<p class="badge"><img src="images/tag_ac.png"></p>
+
+Specifies the caption to be displayed as an extra on the [OTA update screen](otabrowser.md#display-an-extra-string-on-the-update-screenenhanced-wv130). The extra caption you specified will be displayed in the upper right corner of the OTA update screen. Also, you can only specify the caption string, and you cannot specify the style individually. An extra caption will draw up with the default style of AutoConnect.<dl class="apidl">
+    <dt>**Type**</dt>
+    <dd><span class="apidef">const char&#42;</span><span class="apidesc"> An extra caption string pointer.</span></dd></dl>
+
 ### <i class="fa fa-caret-right"></i> password
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Set the password for authentication.<dl class="apidl">
     <dt>**Type**</dt>
@@ -258,11 +333,15 @@ Set the password for authentication.<dl class="apidl">
 
 ### <i class="fa fa-caret-right"></i> portalTimeout
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Specify the timeout value of the captive portal in [ms] units. It is valid when the station is not connected and does not time out if the station is connected to the ESP module in SoftAP mode (i.e. Attempting WiFi connection with the portal function). If 0, the captive portal will not be timed-out.<dl class="apidl">
     <dt>**Type**</dt>
     <dd><span class="apidef">unsigned long</span><span class="apidesc">Captive portal timeout value. The default value is 0.</span></dd></dl>
 
 ### <i class="fa fa-caret-right"></i> preserveAPMode
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Specifies starting the STA while maintaining the state of the SoftAP mode in the [**AutoConnect::begin**](api.md#begin). This setting only applies when the [**AutoConnectConfig::autoRise**](apiconfig.md#autorise) is false.<dl class="apidl">
     <dt>**Type**</dt>
@@ -273,7 +352,20 @@ Specifies starting the STA while maintaining the state of the SoftAP mode in the
 
 Note that this option is not for starting the SoftAP forcibly in [**AutoConnect::begin**](api.md#begin) and only keeps AP mode, SoftAP initiation is left to the Sketch.
 
+### <i class="fa fa-caret-right"></i> preserveIP
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
+When using existing credentials to connect WiFi, the station IP configuration specified with the [**AutoConnectConfig::staip**](apiconfig.md#staip), [**AutoConnectConfig::staGateway**](apiconfig.md#stagateway), and [**AutoConnectConfig::staNetmask**](apiconfig.md#stanetmask) are preferred over the IP settings of the stored credentials. If this value is set to true, IP configurations stored with credentials will not be restored.<dl class="apidl">
+    <dt>**Type**</dt>
+    <dd>bool</dd>
+    <dt>**Value**</dt>
+    <dd><span class="apidef">true</span><span class="apidesc">Use IP addresses specified with the [AutoConnectConfig::staip](apiconfig.md#staip), [AutoConnectConfig::staGateway](apiconfig.md#stagateway), and [AutoConnectConfig::staNetmask](apiconfig.md#stanetmask) as the station IP configuration.</span></dd>
+    <dd><span class="apidef">false</span><span class="apidesc">When reconnecting, the station IP configuration specified with AutoConnectConfig is ignored and the saved credential values are used.</span></dd></dl>
+
 ### <i class="fa fa-caret-right"></i> principle
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Specify the connection order will attempt to connect to one of the highest RSSI values among multiple available access points. It is given as an enumeration value of **AC_PRINCIPLE_t** indicating.<dl class="apidl">
     <dt>**Type**</dt>
@@ -284,11 +376,15 @@ Specify the connection order will attempt to connect to one of the highest RSSI 
 
 ### <i class="fa fa-caret-right"></i> psk
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Sets password for SoftAP. The length should be from 8 to up to 63. The default value is **12345678**.<dl class="apidl">
     <dt>**Type**</dt>
     <dd>String</dd></dl>
 
 ### <i class="fa fa-caret-right"></i> reconnectInterval
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Specifies the number of units for interval time to attempt automatic reconnection when [**AutoConnectConfig::autoReconnect**](#autoreconnect) is enabled. This value is specified by the number of unit times from 0 to 255, and one unit time is macro-defined as `AUTOCONNECT_UNITTIME` in `AutoConnectDefs.h` file of library source code, and its initial value is 30[s].<dl class="apidl">
     <dt>**Type**</dt>
@@ -309,6 +405,8 @@ If **0** is specified for the reconnectInterval, background reconnection attempt
 
 ### <i class="fa fa-caret-right"></i> retainPortal
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Specify whether to continue the portal function even if the captive portal timed out. If the true, when a timeout occurs, the [**AutoConnect::begin**](api.md#begin) function is exited with returns false, but the portal facility remains alive. So SoftAP remains alive and you can invoke AutoConnect while continuing sketch execution. The default is false.<dl class="apidl">
     <dt>**Type**</dt>
     <dd>bool</dd>
@@ -319,10 +417,12 @@ Specify whether to continue the portal function even if the captive portal timed
 !!! hint "Connection request after timed-out"
     With the **retainPortal**, even if AutoConnect::begin in the setup() is timed out, you can execute the Sketch and the portal function as a WiFi connection attempt by calling AutoConnect::handleClient in the loop().
 
-!!! info "All unresolved addresses redirects to /_ac"
+!!! info "All unresolved addresses redirects &#47;&#95;ac"
     If you enable the **retainPortal** option, **all unresolved URIs will be redirected to `SoftAPIP/_ac`**. It happens frequently as client devices repeat captive portal probes in particular. To avoid this, you need to exit from the WiFi connection Apps on your device once.
 
 ### <i class="fa fa-caret-right"></i> staip
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Set a static IP address. The IP will behave with STA mode.<dl class="apidl">
     <dt>**Type**</dt>
@@ -330,17 +430,23 @@ Set a static IP address. The IP will behave with STA mode.<dl class="apidl">
 
 ### <i class="fa fa-caret-right"></i> staGateway
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Set the gateway address when using static IP address.<dl class="apidl">
     <dt>**Type**</dt>
     <dd>IPAddress</dd></dl>
 
 ### <i class="fa fa-caret-right"></i> staNetmask
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Set the subnetmask when using static IP address.<dl class="apidl">
     <dt>**Type**</dt>
     <dd>IPAddress</dd></dl>
 
 ### <i class="fa fa-caret-right"></i> ticker
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Set flicker signal output according to WiFi connection status during AutoConnect::begin behavior.<dl class="apidl">
     <dt>**Type**</dt>
@@ -351,11 +457,15 @@ Set flicker signal output according to WiFi connection status during AutoConnect
 
 ### <i class="fa fa-caret-right"></i> tickerPort
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Specifies the GPIO port number to output the flicker signal of the ticker. The default assumes on the board dependent definition LED_BUILTIN macro redefined by **`AUTOCONNECT_TICKER_PORT`** in [`AutoConnectDefs.h`](api.md#defined-macros).<dl class="apidl">
     <dt>**Type**</dt>
     <dd>uint8_t</dd></dl>
 
 ### <i class="fa fa-caret-right"></i> tickerOn
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Specifies the active logic level of the flicker signal. This value indicates the active signal level when driving the ticker.<dl class="apidl">
     <dt>**Type**</dt>
@@ -366,17 +476,23 @@ Specifies the active logic level of the flicker signal. This value indicates the
 
 ### <i class="fa fa-caret-right"></i> title
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Set the menu title.<dl class="apidl">
     <dt>**Type**</dt>
     <dd>String</dd></dl>
 
 ### <i class="fa fa-caret-right"></i> uptime
 
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
+
 Specifies the waiting time for the module to reboot.<dl class="apidl">
     <dt>**Type**</dt>
     <dd><span class="apidef">int</span><span class="apidesc">The default value is AUTOCONNECT_TIMEOUT/1000.</span></dd></dl>
 
 ### <i class="fa fa-caret-right"></i> username
+
+<p class="badge"><img src="images/tag_ac.png"> <img src="images/tag_accore.png"></p>
 
 Set the username for authentication.<dl class="apidl">
     <dt>**Type**</dt>
@@ -393,12 +509,13 @@ Set the username for authentication.<dl class="apidl">
 | [autoReconnect](#autoreconnect) | bool | false | |
 | [autoReset](#autoreset) | bool | true | |
 | [autoRise](#autorise) | bool | true | |
-| [autoSave](#autosave) | AC_SAVECREDENTIAL_t | AC_SAVECREDENTIAL_AUTO | AC_SAVECREDENTIAL_NEVER<br>AC_SAVECREDENTIAL_AUTO |
+| [autoSave](#autosave) | AC_SAVECREDENTIAL_t | AC_SAVECREDENTIAL_AUTO | AC_SAVECREDENTIAL_AUTO<br>AC_SAVECREDENTIAL_ALWAYS<br>AC_SAVECREDENTIAL_NEVER |
+| [beginTimeout](#begintimeout) | unsinged long | 30000UL | AUTOCONNECT_TIMEOUT |
 | [bootUri](#booturi) | AC_ONBOOTURI_t | AC_ONBOOTURI_ROOT | AC_ONBOOTURI_ROOT<br>AC_ONBOOTURI_HOME |
 | [boundaryOffset](#boundaryoffset) | uint16_t | 0 | AC_IDENTIFIER_OFFSET |
 | [channel](#channel) | uint8_t | 1 | AUTOCONNECT_AP_CH |
-| [dns1](#dns1) | IPAddress | 0U | |
-| [dns2](#dns2) | IPAddress | 0U | |
+| [dns1](#dns1) | IPAddress | 0UL | |
+| [dns2](#dns2) | IPAddress | 0UL | |
 | [gateway](#gateway) | IPAddress | 172.217.28.1 | AUTOCONNECT_AP_GW |
 | [hidden](#hidden) | uint8_t | 0 | |
 | [homeUri](#homeuri) | String | `/` | AUTOCONNECT_HOMEURI |
@@ -408,16 +525,17 @@ Set the username for authentication.<dl class="apidl">
 | [minRSSI](#minrssi) | int16_t | -120 | AUTOCONNECT_MIN_RSSI |
 | [netmask](#netmask) | IPAddress | 172.217.28.1 | AUTOCONNECT_AP_NM |
 | [ota](#ota) | AC_OTA_t | AC_OTA_EXTRA | AC_OTA_EXTRA<br>AC_OTA_BUILTIN |
+| [otaExtraCaption](#otaextracaption) | const char* | nullptr | |
 | [password](#password) | String | Follow [psk](#psk) | |
-| [portalTimeout](#portaltimeout) | unsigned long | 0 | AUTOCONNECT_CAPTIVEPORTAL_TIMEOUT |
+| [portalTimeout](#portaltimeout) | unsigned long | 0UL | AUTOCONNECT_CAPTIVEPORTAL_TIMEOUT |
 | [preserveAPMode](#preserveapmode) | bool | false | |
 | [principle](#principle) | AC_PRINCIPLE_t | AC_PRINCIPLE_RECENT | AC_PRINCIPLE_RECENT<br>AC_PRINCIPLE_RSSI |
 | [psk](#psk) | String | `12345678` | AUTOCONNECT_PSK |
 | [reconnectInterval](#reconnectinterval) | uint8_t | 0 | |
 | [retainPortal](#retainportal) | bool | false | |
-| [staGateway](#stagateway) | IPAddress | 0U | |
-| [staip](#staip) | IPAddress | 0U | |
-| [staNetmask](#stanetmask) | IPAddress | 0U | |
+| [staGateway](#stagateway) | IPAddress | 0UL | |
+| [staip](#staip) | IPAddress | 0UL | |
+| [staNetmask](#stanetmask) | IPAddress | 0UL | |
 | [ticker](#ticker) | bool | false | |
 | [tickerOn](#tickeron) | uint8_t | LOW | AUTOCONNECT_UPDATE_LEDON |
 | [tickerPort](#tickerport) | uint8_t | LED_BUILTIN | AUTOCONNECT_TICKER_PORT |

@@ -6,8 +6,8 @@ You can embed custom Web pages written in [**JSON**](https://www.json.org/index.
 
 By providing the following JSON document to AutoConnect, you can include the custom Web page like the below:
 
-<div style="float:left;width:50%;height:470px;overflow:auto"><img src="images/ac_json.png"></div>
-<img style="margin-left:30px;width:40%;height:470px;" src="images/ac_mqtt_setting.png">
+<div style="float:left;width:409px;height:470px;overflow:auto"><img src="images/ac_json.png"></div>
+<img style="margin-left:30px;width:264px;height:470px;" src="images/ac_mqtt_setting.png">
 
 A JSON document for AutoConnect can contain the custom Web page multiple. You can further reduce the Sketch process by loading multiple pages of JSON document at once.
 
@@ -25,6 +25,7 @@ AutoConnectAux will configure custom Web pages with JSON objects. The elements t
   "title" : title,
   "uri" : uri,
   "menu" : true | false,
+  "response" : true | false,
   "auth": authentication,
   "element" : element_array
 }
@@ -41,6 +42,12 @@ AutoConnectAux will configure custom Web pages with JSON objects. The elements t
 #### <i class="fa fa-key"></i> **menu**
 
 : This is a Boolean value indicating whether to include the custom Web page in the AutoConnect menu. If the page only responds to another page and you want to prevent the direct use from the menu, you can exclude from the AutoConnect menu. If this key is false, it will not appear in the menu.
+
+#### <i class="fa fa-key"></i> **response**
+
+: This is a Boolean value indicating whether to respond to HTTP responses independently in its custom web page handler. Normally, AutoConnect will respond with a response code of 200 after its custom web page has processed the request from the client. However, depending on the processing status of the handler, it may be necessary to return a response other than 200. For example, it might respond with a 302 redirect. In such situations, the custom web page handler can apply the sendHeader, sendContent, and send functions of the WebServer library to respond with its own response.
+
+: If the `response` is `false`, AutoConnect will not respond with an HTTP response when it returns from the custom web page handler. The custom web page handler needs to perform the HTTP response by itself.
 
 #### <i class="fa fa-key"></i> **auth**
 
@@ -140,6 +147,7 @@ JSON description for AutoConnectElements describes as an array in the *element* 
 : -  AutoConnectFile: [**ACFile**](#acfile)
 : -  AutoConnectInput: [**ACInput**](#acinput)
 : -  AutoConnectRadio: [**ACRadio**](#acradio)
+: -  AutoConnectRange: [**ACRange**](#acrange)
 : -  AutoConnectSelect: [**ACSelect**](#acselect)
 : -  AutoConnectStyle: [**ACStyle**](#acstyle)
 : -  AutoConnectSubmit: [**ACSubmit**](#acsubmit)
@@ -152,6 +160,7 @@ Specifies a tag to add behind the HTML code generated from the element. Its purp
 : - **none** : No generate additional tags.
 : - **br** : Add a `<br>` tag to the end of the element.
 : - **par** : Include the element in the `<p> ~ </p>` tag.
+: - **div** : Include the element in the `<div> ~ </div>` tag.
 
 #### <i class="fa fa-key"></i> **<i>key_according_to_type</i>**
 
@@ -195,6 +204,10 @@ This is different for each AutoConnectElements, and the key that can be specifie
     : - **password** : Password input field. The text is obscured so that it cannot be read, usually by replacing each character with a symbol such as the asterisk ("`*`") or a dot ("`•`").
     : - **number** : A field let the user enter number characters only.
 
+!!! note "Numerical keypad is different"
+    When the AutoConnectInput element with the `number` applied is focused on the browser, the numeric keypad may be displayed automatically. For popular mobile OSes such as Android and iOS, the numeric keypad has the following styles and is different with each OS.
+    <div style="display:inline-block"><img src="images/html5_forms_number.png"><span style="padding-left:30px"></span><img src="images/html5_forms_number_ios.png"></div>
+
 #### <i class="fa fa-caret-right"></i> ACRadio
 
 : - **value** : Specifies the collection of radio buttons as an array element.
@@ -204,6 +217,20 @@ This is different for each AutoConnectElements, and the key that can be specifie
     : - **vertical** : Vertical arrangement.
 
 : - **checked** : Specifies the index number (1-based) of the radio buttons collection to be checked.
+
+#### <i class="fa fa-caret-right"></i> ACRange
+
+: - **value** : Specifies the initial value in the range. If the [`value`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/range#value) is not specified, the default value is determined by the following algorithm:<br>`#!js value = (max < min) ? min : min + (max - min)/2;`
+: - **label** : Specifies a label of the range slider. Its placement is always to the left of the input box.
+: - **min** : Specifies the most negative value within the range of allowed values and must not be less than the `value`.
+: - **max** : Specifies the greatest value in the range of permitted values.
+: - **step** : Specifies the granularity that the value must adhere to. The default is 1. As you move the slider, it increases or decreases the `value` according to the `step` in granularity.
+: - **magnify** : Displays the current value of the range on the left or right side of the slider. The `magnify` accepts one of the following:
+    : - **infront** : Displays the current value on the left side.
+    : - **behind** : Displays the current value on the right side.
+    : - **void** :  No display the current value. This is the default.
+
+: - **style** : Specifies the qualification style to give to the content and can use the style attribute format as it is.
 
 #### <i class="fa fa-caret-right"></i> ACSelect
 
@@ -223,7 +250,7 @@ This is different for each AutoConnectElements, and the key that can be specifie
 
 : - **value** : Specifies a content and also can contain the native HTML code, but remember that your written code is enclosed by the div tag.
 : - **style** : Specifies the qualification style to give to the content and can use the style attribute format as it is.
-: - **format** : Specifies how to interpret the value. It specifies the conversion format when outputting values. The format string conforms to the C-style printf library functions, but depends on the espressif sdk implementation. The conversion specification is valid only for **%s** format. (Left and Right justification, width are also valid.)
+: - **format** : Specifies how to interpret the value. It specifies the conversion format when outputting values. The format string conforms to the C-style printf library functions, but depends on the espressif SDK implementation. The conversion specification is valid only for **%s** format. (Left and Right justification, width are also valid.)
 
 !!! caution "AutoConnect JSON parsing process is not perfect"
     It is based on analysis by ArduinoJson, but the semantic analysis is simplified to save memory. Consequently, it is not an error that a custom Web page JSON document to have unnecessary keys. It will be ignored.
@@ -404,4 +431,4 @@ For ESP32 module equips with PSRAM, you can allocate the JSON document buffer to
 
 ## Saving JSON document
 
-the Sketch can persist AutoConnectElements as a JSON document and also uses [this function](achandling.md#saving-autoconnectelements-with-json) to save the values ​​entered on the custom Web page. And you can reload the saved JSON document into AutoConnectElements as the field in a custom Web page using the [load function](achandling.md#loading-autoconnectaux-autoconnectelements-with-json). 
+the Sketch can persist AutoConnectElements as a JSON document and also uses [this function](achandling.md#saving-autoconnectelements-with-json) to save the values entered on the custom Web page. And you can reload the saved JSON document into AutoConnectElements as the field in a custom Web page using the [load function](achandling.md#loading-autoconnectaux-autoconnectelements-with-json). 

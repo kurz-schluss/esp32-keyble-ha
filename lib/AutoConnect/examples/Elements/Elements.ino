@@ -7,36 +7,37 @@
 
   This example demonstrates the typical behavior of AutoConnectElement.
   It also represents a basic structural frame for saving and reusing
-  values ​​entered in a custom web page into flash.
+  values entered in a custom web page into flash.
 */
 
+// To properly include the suitable header files to the target platform.
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+#include <ESP8266mDNS.h>
+#define FORMAT_ON_FAIL
 using WebServerClass = ESP8266WebServer;
 #elif defined(ARDUINO_ARCH_ESP32)
 #include <WiFi.h>
 #include <WebServer.h>
-#include <SPIFFS.h>
+#include <HTTPClient.h>
+#include <ESPmDNS.h>
+#define FORMAT_ON_FAIL  true
 using WebServerClass = WebServer;
 #endif
+
 #include <AutoConnect.h>
 
-/*
-  AC_USE_SPIFFS indicates SPIFFS or LittleFS as available file systems that
-  will become the AUTOCONNECT_USE_SPIFFS identifier and is exported as shown
-  the valid file system. After including AutoConnect.h, the Sketch can determine
-  whether to use FS.h or LittleFS.h by AUTOCONNECT_USE_SPIFFS definition.
-*/
-#include <FS.h>
-#if defined(ARDUINO_ARCH_ESP8266)
-#ifdef AUTOCONNECT_USE_SPIFFS
-FS& FlashFS = SPIFFS;
-#else
+#ifdef AUTOCONNECT_USE_LITTLEFS
 #include <LittleFS.h>
+#if defined(ARDUINO_ARCH_ESP8266)
 FS& FlashFS = LittleFS;
-#endif
 #elif defined(ARDUINO_ARCH_ESP32)
+fs::LittleFSFS& FlashFS = LittleFS;
+#endif
+#else
+#include <FS.h>
 #include <SPIFFS.h>
 fs::SPIFFSFS& FlashFS = SPIFFS;
 #endif
@@ -60,7 +61,8 @@ static const char PAGE_ELEMENTS[] PROGMEM = R"(
       "name": "text",
       "type": "ACText",
       "value": "AutoConnect element behaviors collection",
-      "style": "font-family:Arial;font-size:18px;font-weight:400;color:#191970"
+      "style": "font-family:Arial;font-size:18px;font-weight:400;color:#191970",
+      "posterior": "div"
     },
     {
       "name": "check",
@@ -168,12 +170,14 @@ static const char PAGE_SAVE[] PROGMEM = R"(
     {
       "name": "validated",
       "type": "ACText",
-      "style": "color:red"
+      "style": "color:red",
+      "posterior": "div"
     },
     {
       "name": "echo",
       "type": "ACText",
-      "style": "font-family:monospace;font-size:small;white-space:pre;"
+      "style": "font-family:monospace;font-size:small;white-space:pre;",
+      "posterior": "div"
     },
     {
       "name": "ok",
@@ -196,6 +200,8 @@ void setup() {
   Serial.begin(115200);
   Serial.println();
 
+  FlashFS.begin(FORMAT_ON_FAIL);
+
   // Responder of root page handled directly from WebServer class.
   server.on("/", []() {
     String content = "Place the root page with the sketch application.&ensp;";
@@ -213,20 +219,18 @@ void setup() {
       // Since this handler only supports AutoConnectSubmit called the
       // Load, it uses the uri of the custom web page placed to
       // determine whether the Load was called me or not.
-      FlashFS.begin();
       File param = FlashFS.open(PARAM_FILE, "r");
       if (param) {
         aux.loadElement(param, { "text", "check", "input", "input", "pass", "number", "radio", "select" } );
         param.close();
       }
-      FlashFS.end();
     }
     return String();
   });
 
   saveAux.load(FPSTR(PAGE_SAVE));
   saveAux.on([] (AutoConnectAux& aux, PageArgument& arg) {
-    // You can validate input values ​​before saving with
+    // You can validate input values before saving with
     // AutoConnectInput::isValid function.
     // Verification is using performed regular expression set in the
     // pattern attribute in advance.
@@ -237,11 +241,6 @@ void setup() {
     // formatted text using the format attribute.
     aux["caption"].value = PARAM_FILE;
 
-#if defined(ARDUINO_ARCH_ESP8266)
-    FlashFS.begin();
-#elif defined(ARDUINO_ARCH_ESP32)
-    FlashFS.begin(true);
-#endif
     File param = FlashFS.open(PARAM_FILE, "w");
     if (param) {
       // Save as a loadable set for parameters.
@@ -255,7 +254,6 @@ void setup() {
     else {
       aux["echo"].value = "Filesystem failed to open.";
     }
-    FlashFS.end();
     return String();
   });
 
@@ -265,6 +263,8 @@ void setup() {
   config.username = USERNAME;
   config.password = PASSWORD;
   config.ticker = true;
+  config.autoReconnect = true;
+  config.reconnectInterval = 1;
   portal.config(config);
   portal.begin();
 }

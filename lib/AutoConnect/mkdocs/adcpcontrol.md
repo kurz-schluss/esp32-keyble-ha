@@ -1,7 +1,8 @@
-The default behavior of AutoConnect is to launch the captive portal if 1st-WiFi.begin attempting inside [AutoConnect::begin](api.md#begin) fails. You can change this default behavior through the [AutoConnectConfig](apiconfig.md) settings join together with Sketch code that implements to control the WiFi connection attempting.
+The default behavior of AutoConnect is to launch the captive portal if *1st-WiFi.begin* attempting inside [AutoConnect::begin](api.md#begin) fails. You can change this default behavior through the [AutoConnectConfig](apiconfig.md) settings join together with Sketch code that implements to control the WiFi connection attempting.
 
 - [Captive portal start control](#captive-portal-start-control)
 - [Captive portal start detection](#captive-portal-start-detection)
+- [Captive portal state identification](#captive-portal-state-identification)
 - [Captive portal timeout control](#captive-portal-timeout-control)
 - [Disable the captive portal](#disable-the-captive-portal)
 - [Launch the captive portal on demand by external trigger](#launch-the-captive-portal-on-demand-by-external-trigger)
@@ -15,7 +16,7 @@ AutoConnect will launch the captive portal based on the [AutoConnectConfig](apic
 
 The [**autoRise**](apiconfig.md#autorise) allows or disallows the launch of the captive portal. AutoConnect launches the captive portal only if the autoRise is **true**. If the autoRise is **false**, the captive portal will not start even if the WiFi connection is lost.
 
-Basically, the captive portal initiation is triggered by the result of 1st-WiFi.begin, but Sketch can control it according to direct the following four actions by configuring AutoConnectConfig with two parameters, the [**immediateStart**](apiconfig.md#immediatestart) and the [**autoRise**](apiconfig.md#autorise).
+Basically, the captive portal initiation is triggered by the result of *1st-WiFi.begin*, but Sketch can control it according to direct the following four actions by configuring AutoConnectConfig with two parameters, the [**immediateStart**](apiconfig.md#immediatestart) and the [**autoRise**](apiconfig.md#autorise).
 
 <table>
   <tr>
@@ -28,7 +29,7 @@ Basically, the captive portal initiation is triggered by the result of 1st-WiFi.
   </tr>
   <tr>
     <td>true</td>
-    <td>Skip 1st-WiFi.begin<br>ESP module becomes SoftAP and the captive portal starts immediately.<br></td>
+    <td>Skip *1st-WiFi.begin*<br>ESP module becomes SoftAP and the captive portal starts immediately.<br></td>
     <td>Not attempt WiFi connection.<br>Only WebServer will start in STA mode.</td>
   </tr>
   <tr>
@@ -51,7 +52,7 @@ AutoConnect Portal;
 
 bool startCP(IPAddress& ip) {
   digitalWrite(BUILTIN_LED, HIGH);
-  Serial.println("C.P. started, IP:" + WiFi.localIP().toString());
+  Serial.println("C.P. started, IP:" + ip.toString());
   return true;
 }
 
@@ -70,11 +71,24 @@ void loop() {
 }
 ```
 
+## Captive portal state identification
+
+You can use the [*AutoConnect::isPortalAvailable*](api.md#isportalavailable) function to identify if AutoConnect is in a captive portal state.
+
+[Captive-Portal](https://en.wikipedia.org/wiki/Captive_portal#Implementation) - i.e., just a spoofed response to a DNS lookup for Internet connection verification that occurs on a new connection attempt from the client device; it needs a DNS server and SoftAP to work. AutoConnect implements it with HTTP redirection. The [*AutoConnect::isPortalAvailable*](api.md#isportalavailable) function returns true if all of the following conditions are met.
+
+- ESP module is in WIFI_AP mode and enable SoftAP.
+- IP address assigned to SoftAP is the equivalent of [AutoConnectConfig::apip](apiconfig.md#apip).
+- AutoConnect is running a DNS server for directing to the captive portal. Through its action, DNS lookups issued by client devices for Internet transparency validation are directed to the ESP module SoftAP.
+
+!!! info "A similar utility is AutoConnect::portalStatus"
+    See [Verify the WiFi connection conditions](adconnection.md#verify-the-wifi-connection-conditions) and [*AutoConnect::portalStatus*](api.md#portalstatus) function.
+
 ## Captive portal timeout control
 
-Once AutoConnect has entered the captive portal state due to the above conditions, the default behavior is that [AutoConnect::begin](api.md#begin) will not exit until a WiFi connection is established. Captive portal timeout control prevents AutoConnect from blocking the Sketch progress. The Sketch can abort AutoConnect::begin and returns control to the Sketch. 
+Once AutoConnect has entered the captive portal state due to the above conditions, the default behavior is that [AutoConnect::begin](api.md#begin) will not exit until a WiFi connection is established. Captive portal timeout control prevents AutoConnect from blocking the Sketch progress. It allows Sketch to abort AutoConnect::begin and returns control to Sketch. 
 
-AutoConnect has two parameters for timeout control. The first is the timeout value used when trying to connect to the specified AP. It works like a typical timeout control for connection attempts with WiFi.begin. This setting is specified by the [*AutoConnectConfig::beginTimeout*](apiconfig.md#begintimeout) or third argument of the [AutoConnect::begin](api.md#begin) function. The default value is the macro defined by [**AUTOCONNECT_TIMEOUT**](https://github.com/Hieromon/AutoConnect/blob/master/src/AutoConnectDefs.h#L103) in the [`AutoConnectDefs.h`](https://github.com/Hieromon/AutoConnect/blob/master/src/AutoConnectDefs.h) header file.
+AutoConnect has two parameters for timeout control. The first is the timeout value used when trying to connect to the specified AP. It works like a typical timeout control for connection attempts with WiFi.begin. This setting is specified by the [*AutoConnectConfig::beginTimeout*](apiconfig.md#begintimeout) or third argument of the [AutoConnect::begin](api.md#begin) function. The default value is the macro defined by [**AUTOCONNECT_TIMEOUT**](https://github.com/Hieromon/AutoConnect/blob/master/src/AutoConnectDefs.h#L163) in the [`AutoConnectDefs.h`](https://github.com/Hieromon/AutoConnect/blob/master/src/AutoConnectDefs.h) header file.
 
 Another timeout control is for the captive portal itself. It is useful if you want to keep the Sketch offline running even if a WiFi connection is not possible. You can also combine its setting with the [**immediateStart**](#launch-the-captive-portal-on-demand-by-external-trigger) option to create highly mobile sketches. The timeout of the captive portal is specified by the [*AutoConnectConfig::portalTimeout*](apiconfig.md#portaltimeout) as follows.
 
@@ -162,7 +176,7 @@ void loop() {
 
 ## Disable the captive portal
 
-It can also prevent the captive portal from starting even if the connection at the 1st-WiFi.begin fails. In this case, [AutoConnect::begin](api.md#begin) behaves same as *WiFi.begin*.
+It can also prevent the captive portal from starting even if the connection at the *1st-WiFi.begin* fails. In this case, [AutoConnect::begin](api.md#begin) behaves same as *WiFi.begin*.
 
 For disabling the captive portal, [**autoRise**](apiconfig.md#autorise) sets to false with [AutoConnectConfig](apiconfig.md).
 
@@ -184,7 +198,7 @@ Here section describes how to launch on demand the captive portal, and suggests 
 1. Offline for usual operation, connect to WiFi with an external switch
 
     You can use this template if the ESP module does not connect to WiFi at an ordinal situation and need to establish by a manual trigger. In this case, it is desirable that AutoConnect not start until an external switch fires. This behavior is similar to the [WiFiManager's startConfigPortal](https://github.com/tzapu/WiFiManager#on-demand-configuration-portal) function.  
-    [*AutoConnectConfig::immediateStart*](apiconfig.md#immediatestart) is an option to launch the portal by the SoftAP immediately without attempting 1st-WiFi.begin. Also, by setting the [*AutoConnectConfig::autoRise*](apiconfig.md#autorise) option to false, it is possible to suppress unintended automatic pop-ups of the portal screen when connecting to an ESP module SSID.  
+    [*AutoConnectConfig::immediateStart*](apiconfig.md#immediatestart) is an option to launch the portal by the SoftAP immediately without attempting *1st-WiFi.begin*. Also, by setting the [*AutoConnectConfig::autoRise*](apiconfig.md#autorise) option to false, it is possible to suppress unintended automatic pop-ups of the portal screen when connecting to an ESP module SSID.  
     To implement this, execute AutoConnect::config within the **setup()** function as usual, and handle AutoConnect::begin inside the **loop()** function.
 
     ```cpp hl_lines="9"
@@ -240,7 +254,7 @@ Here section describes how to launch on demand the captive portal, and suggests 
     }
 
     bool connectWiFi(const char* ssid, const char* password, unsigned long timeout) {
-      WiFi.mode(WiFi_STA);
+      WiFi.mode(WIFI_STA);
       delay(100);
       WiFi.begin(ssid, password);
       unsigned long tm = millis();
@@ -309,7 +323,7 @@ void loop() {
 !!! note "Need autoRise enabled"
     Need [*AutoConnectConfig::autoRise*](apiconfig.md#autorise) setting enabled to start the captive portal on demand during a handleClient loop.
 
-Although the Sketch above specifies the [**retainPortal**](apiconfig.md#retainportal), it does not instruct starts the captive portal always. AutoConnect will try WiFi.begin once in [AutoConnect::begin](api.md#begin) unless the [**immediateStart**](apiconfig.md#immediatestart) option is specified. If AutoConnect fails the 1st-WiFi.begin, the captive portal will be launched at that point and the Sketch execution will stay within the [AutoConnect::begin](api.md#begin) function.
+Although the Sketch above specifies the [**retainPortal**](apiconfig.md#retainportal), it does not instruct starts the captive portal always. AutoConnect will try WiFi.begin once in [AutoConnect::begin](api.md#begin) unless the [**immediateStart**](apiconfig.md#immediatestart) option is specified. If AutoConnect fails the *1st-WiFi.begin*, the captive portal will be launched at that point and the Sketch execution will stay within the [AutoConnect::begin](api.md#begin) function.
 
 There is also a way to avoid starting the captive portal inside [AutoConnect::begin](api.md#begin) and start the captive portal according to the WiFi connection status after the Sketch execution transitions to a **handleClient loop**. Adjusting the timing of [**autoRise**](apiconfig.md#autorise) activation will allow the captive portal to start only from inside [AutoConnect::handleClient](api.md#handleclient) function.
 

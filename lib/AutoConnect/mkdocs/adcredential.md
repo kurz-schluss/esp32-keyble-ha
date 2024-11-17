@@ -4,6 +4,7 @@ Sketches can access their stored credentials through a class that is independent
 - [Access to saved credentials](#access-to-saved-credentials)
 - [Autosave Credential](#autosave-credential)
 - [Move the saving area of EEPROM for the credentials](#move-the-saving-area-of-eeprom-for-the-credentials)
+- [Save and restore credentials](#save-and-restore-credentials)
 
 ## Access to saved credentials
 
@@ -15,8 +16,11 @@ AutoConnect stores the credentials of the established WiFi connection in the fla
 
 ## Autosave Credential
 
-By default, AutoConnect saves the credentials of the established connection to the flash. You can disable it with the [**autoSave**](apiconfig.md#autosave) parameter specified by [AutoConnectConfig](apiconfig.md).  
-See the [Saved credentials access](credit.md) chapter for details on accessing stored credentials.
+In the sketch, you can give an indication of when to save the credentials by setting the following three options of [*AutoConnectConfig::autoSave*](apiconfig.md#autosave):
+
+- AC_SAVECREDENTIAL_AUTO : AutoConnect will save a credential when the WiFi connection is established with an access point. Its credential contains BSSID which a connection established access point has.
+- AC_SAVECREDENTIAL_ALWAYS : AutoConnect will save a credential entered via [Configure new AP](menu.md#configure-new-ap) menu even if a connection attempt has failed. BSSID does not exist in the credentials registered with this option. (will be 0x00) If this credential is selected as a connection candidate, the SSID will be adopted for matching attempts with the target access point even if [`AUTOCONNECT_APKEY_SSID`](adconnection.md#match-with-known-access-points-by-ssid) is not enabled.
+- AC_SAVECREDENTIAL_NEVER : AutoConnect will not store the credentials even if the connection to the access point is successful. However, the core SDK will save it, so it retains the previously established connection unless you disconnect the ESP module from the connected access point.
 
 ```cpp hl_lines="3"
 AutoConnect       Portal;
@@ -104,4 +108,88 @@ EEPROM.put<EEPROM_CONFIG_t>(0, eepromConfig);
 EEPROM.commit();
 EEPROM.end();
 ...
+```
+
+## Save and restore credentials
+
+AutoConnect can save stored credentials to various file systems. It is also possible to restore from those file systems. The file system can be SPIFFS, LittleFS, or SDFS. [AutoConnect::saveCredential](api.md#savecredential) and [AutoConnect::restoreCredential](api.md#restorecredential) functions allow the sketch to save and restore credentials to files.
+
+Use the [AutoConnect::saveCredential](api.md#savecredential) function to save AutoConnect credentials. This function bulk outputs while preserving AutoConnect's internal credential data structure, so this output file would be used as an input for restoring by the `restoreCredential` function. The following code snippet is an example of saving AutoConnect credentials to a file on LittleFS with ESP8266. A subsequent snippet that restores credentials saved by `saveCredential` with `restoreCredential` is also shown as an example.
+
+```cpp hl_lines="12"
+#include <FS.h>
+#include <LittleFS.h>
+
+...
+
+AutoConnect portal;
+
+void setup() {
+  LittleFS.begin(true);
+
+  if (portal.begin()) {
+    portal.saveCredential("/cred", LittleFS);
+  }
+}
+```
+
+```cpp hl_lines="14"
+#include <FS.h>
+#include <LittleFS.h>
+
+...
+
+AutoConnect portal;
+AutoConnectConfig config;
+
+void setup() {
+  LittleFS.begin();
+
+  config.autoReconnect = true;
+  portal.config(config);
+  portal.restoreCredential("/cred", LittleFS);
+
+  portal.begin();
+}
+```
+
+The credentials file output by [AutoConnect::saveCredential](api.md#savecredential) is compatible with ESP8266 and ESP32. The credentials file output by `saveCredential` is compatible with ESP8266 and ESP32, so you can output the AutoConnect credentials on ESP8266 to a portable SD and input it as AutoConnect credentials running on ESP32. To use SD for saving and restoring credentials, use the `saveCredential` and `restoreCredential` functions with **template arguments** as shown in the code snippet below. In this case, the template argument must specify the class name of the SD file system that is compatible with the ESP module. It is usually `SDClass` for ESP8266 or `fs::SDFS` for ESP32.
+
+```cpp hl_lines="12"
+#include <SPI.h>
+#include <SD.h>
+
+...
+
+AutoConnect portal;
+
+void setup() {
+  SD.begin();
+
+  if (portal.begin()) {
+    portal.saveCredential<SDClass>("/cred", SDFS);   // For ESP8266
+    // portal.saveCredential<fs::SDFS>("/credentials", SDFS);  // For ESP32
+  }
+}
+```
+
+```cpp hl_lines="14"
+#include <SPI.h>
+#include <SD.h>
+
+...
+
+AutoConnect portal;
+AutoConnectConfig config;
+
+void setup() {
+  SD.begin();
+
+  config.autoReconnect = true;
+  portal.config(config);
+  portal.restoreCredential<SDClass>("/cred", SDFS);  // For ESP8266
+  // portal.restoreCredential<fs::SDFS>("/credentials", SDFS);  // For ESP32
+
+  portal.begin();
+}
 ```

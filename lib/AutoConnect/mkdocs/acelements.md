@@ -8,6 +8,7 @@ Representative HTML elements for making the custom Web page are provided as Auto
 - [AutoConnectFile](#autoconnectfile): File uploader
 - [AutoConnectInput](#autoconnectinput): Labeled text input box
 - [AutoConnectRadio](#autoconnectradio): Labeled radio button
+- [AutoConnectRange](#autoconnectrange): Labeled range slider
 - [AutoConnectSelect](#autoconnectselect): Selection list
 - [AutoConnectStyle](#autoconnectstyle): Custom CSS code
 - [AutoConnectSubmit](#autoconnectsubmit): Submit button
@@ -57,6 +58,7 @@ AutoConnect will not actively be involved in the layout of custom Web pages gene
 - **`AC_Tag_None`** : No generate additional tags.
 - **`AC_Tag_BR`** : Add a `<br>` tag to the end of the element.
 - **`AC_Tag_P`** : Include the element in the `<p> ~ </p>` tag.
+- **`AC_Tag_DIV`** : Include the element in the `<div> ~ </div>` tag.
 
 The default interpretation of the post value is specific to each element.
 
@@ -68,9 +70,14 @@ AutoConnectCheckBox | AC_Tag_BR
 AutoConnectFile | AC_Tag_BR
 AutoConnectInput | AC_Tag_BR
 AutoConnectRadio | AC_Tag_BR
+AutoConnectRange | AC_Tag_BR
 AutoConnectSelect | AC_Tag_BR
 AutoConnectSubmit | AC_Tag_None
 AutoConnectText | AC_Tag_None
+
+!!! note "A placement posterior of AutoConnectText"
+    A placement posterior for AutoConnectText has a slightly peculiar specification. AutoConnectText element without the style attribute will be drained to HTML as a raw value and is accompanied by `<p>`, `<br>` or `<div>` tags according to the post enumeration values.    
+    If the style attribute is specified, the post enumeration value will be ignored and always be enclosed in the `<div>` tag, and the style value will be inserted into `style` attribute of the `<div>` tag.
 
 ### <i class="fa fa-caret-right"></i> type
 
@@ -96,6 +103,7 @@ The enumerators for *ACElement_t* are as follows:
 -  AutoConnectFile: **AC_File**
 -  AutoConnectInput: **AC_Input**
 -  AutoConnectRadio: **AC_Radio**
+-  AutoConnectRange: **AC_Range**
 -  AutoConnectSelect: **AC_Select**
 -  AutoConnectStyle: **AC_Style**
 -  AutoConnectSubmit: **AC_Submit**
@@ -237,7 +245,7 @@ A `label` is an optional string. A label is always arranged on the left side of 
 
 ### <i class="fa fa-caret-right"></i> store
 
-Specifies the destination to save the uploaded file. The destination can be specified the following values ​​in the *ACFile_t* enumeration type.
+Specifies the destination to save the uploaded file. The destination can be specified the following values in the *ACFile_t* enumeration type.
 
 - **`AC_File_FS`** : Save as the SPIFFS file in flash of ESP8266/ESP32 module.
 - **`AC_File_SD`** : Save to an external SD device connected to ESP8266/ESP32 module.
@@ -308,9 +316,13 @@ Specifies the type of input that the text box accepts. AutoConnectInput will gen
 - **`AC_Input_Password`** : `input type="password"`
 - **`AC_Input_Number`** : `input type="number"`
 
+!!! note "Numerical keypad is different"
+    When the AutoConnectInput element with the `AC_Input_Number` applied is focused on the browser, the numeric keypad may be displayed automatically. For popular mobile OSes such as Android and iOS, the numeric keypad has the following styles and is different with each OS.
+    <div style="display:inline-block"><img src="images/html5_forms_number.png"><span style="padding-left:30px"></span><img src="images/html5_forms_number_ios.png"></div>
+
 ## AutoConnectRadio
 
-AutoConnectRadio generates few HTML `#!html <input type="radio">` tags as grouped and the same number of `#!html <label>` tags. AutoConnectRadio can keep the value of a radio button as a collection. The grouped values will be placed in the custom Web page to select only one exclusively.
+AutoConnectRadio generates several HTML `#!html <input type="radio">` tags grouped together. It also assigns an equal number of `#!html <label>` tags to each `#!html <input type="radio">` tag and stores the values of the choices that make up a radio button as a String collection.
 
 <i class="fa fa-eye"></i> **Sample**<br>
 <small>**`AutoConnectRadio radio("radio", { "30 sec.", "60 sec.", "180 sec." }, "Update period", AC_Vertical, 1);`**</small>
@@ -325,11 +337,11 @@ AutoConnectRadio(const char* name, std::vector<String> const& values, const char
 
 ### <i class="fa fa-caret-right"></i> name
 
-It is the `name` of the AutoConnectRadio element and matches the name attribute of the input tags. It also becomes the parameter name of the query string when submitted.
+It is the name of the AutoConnectRadio element, which matches the name attribute of the input tag and defines the radio group by this name. It is also the `name` parameter in the query string during submission.
 
 ### <i class="fa fa-caret-right"></i> values
 
-A `values` is an array of String type for the radio button options which as actually [std::vector](https://en.cppreference.com/w/cpp/container/vector). It is an initialization list can be used. The input tags will be generated from each entry in the values, the amount of which is the same as the number of items in `values`.
+A group of radio buttons is a set of `#!html <input type="radio">` tags with the same name; AutoConnectRadio defines a radio group based on an array of Strings specified as values. A `values` is an array of String, actually a [std::vector](https://en.cppreference.com/w/cpp/container/vector). The sketch can allocate its String array using std::vector's [List-initialization](https://en.cppreference.com/w/cpp/language/list_initialization).
 
 ### <i class="fa fa-caret-right"></i> label
 
@@ -351,6 +363,61 @@ A `checked` specifies the index number (1-based) of the **values** to be checked
 ### <i class="fa fa-caret-right"></i> post
 
 Specifies a tag to add behind the HTML code generated from the element. The default values is `AC_Tag_BR`.
+
+## AutoConnectRange
+
+AutoConnectRange generates an HTML `#!html <input type="range">` tag and a `#!html <label>` tag.
+
+<i class="fa fa-eye"></i> **Sample**<br>
+<small>**`AutoConnectRange range("bri", 0, "Brightness", -2, 2, 1, AC_Infront);`**</small>
+
+<small>On the page:</small><br><img src="images/acrange.png">
+
+### <i class="fa fa-edit"></i> Constructor
+
+```cpp
+AutoConnectRange(const char* name, const int value, const char* label, const int min, const int max, const int step, const ACPosition_t magnify, const ACPosterior_t post, const char* style)
+```
+
+### <i class="fa fa-caret-right"></i> name
+
+It is the `name` of the AutoConnectRange element and matches the name attribute, the id attribute of the input tag. It also becomes the parameter name of the query string when submitted.
+
+### <i class="fa fa-caret-right"></i> value
+
+It becomes a string value of the `value` attribute of an HTML `#!html <input type="range">` tag, which indicates the default value of the range.
+
+### <i class="fa fa-caret-right"></i> label
+
+A `label` is an optional string. A label is always arranged on the left side of the range slider. Specification of a label will generate an HTML `#!html <label>` tag with an id attribute. The range slider and the label are connected by the id attribute.
+
+### <i class="fa fa-caret-right"></i> min
+
+Specifies the most negative value within the range of allowed values and must not be less than the `value` argument.
+
+### <i class="fa fa-caret-right"></i> max
+
+It defines the greatest value in the range of permitted values.
+
+### <i class="fa fa-caret-right"></i> step
+
+It is a number that specifies the granularity that the value must adhere to. The default is 1. As you move the slider, it increases or decreases the value according to the `step` in granularity.
+
+### <i class="fa fa-caret-right"></i> magnify
+
+Displays the current value of the range on the left or right side of the slider.
+
+- **`AC_Infront`** : Displays the current value on the left side.
+- **`AC_Behind`** : Displays the current value on the right side.
+- **`AC_Void`** : No display the current value. This is the default.
+
+### <i class="fa fa-caret-right"></i> post
+
+Specifies a tag to add behind the HTML code generated from the element. The default values is `AC_Tag_BR`.
+
+### <i class="fa fa-caret-right"></i> style
+
+A `style` specifies the qualification style to give to the content and can use the style attribute format as it is.
 
 ## AutoConnectStyle
 
@@ -446,7 +513,12 @@ Specifies a tag to add behind the HTML code generated from the element. The defa
 
 ## AutoConnectText
 
-AutoConnectText generates an HTML `#!html <div>` tag. A `#!html style` attribute will be attached if a [style](#style) parameter is passed.
+AutoConnectText generates a text content enclosed in `#!html <div>`, `#!html <p>` or `#!html <span>` tags; if the [style](#style) parameter is provided, the style attributes is added. A kind of HTML tag applied depends on the value of the [post](#post_9) parameter as follows:
+
+  - **AC_Tag_None**: `<span id='name' style='style'>value</span>`
+  - **AC_Tag_BR**: `<span id='name' style='style'>value</span><br>`
+  - **AC_Tag_P**: `<p id='name' style='style'>value</p>`
+  - **AC_Tag_DIV**: `<div id='name' style='style'>value</div>`
 
 <i class="fa fa-eye"></i> **Sample**<br>
 <small>**`AutoConnectText text("text", "Publishing the WiFi signal strength to MQTT channel. RSSI value of ESP8266 to the channel created on ThingSpeak", "font-family:serif;color:#4682b4;");`**</small>
@@ -477,7 +549,12 @@ A `format` is a pointer to a null-terminated multi byte string specifying how to
 
 ### <i class="fa fa-caret-right"></i> post
 
-Specifies a tag to add behind the HTML code generated from the element. The default values is `AC_Tag_None`.
+Specifies an HTML element that completes the text content. AutoConnectText's post parameter does not specify any behind-supplements, unlike when applied to other elements. A kind of HTML tag applied depends on the enumerated value of the [post](#post_9) parameter as follows:
+
+  - **AC_Tag_None**: `<span id='name' style='style'>value</span>`
+  - **AC_Tag_BR**: `<span id='name' style='style'>value</span><br>`
+  - **AC_Tag_P**: `<p id='name' style='style'>value</p>`
+  - **AC_Tag_DIV**: `<div id='name' style='style'>value</div>`
 
 ## How to coding for the elements
 
@@ -487,25 +564,27 @@ Variables of each AutoConnetElement can be declared with macros. By using the ma
 
 [^2]: The square brackets in the syntax are optional parameters, the stroke is a selection parameter, the bold fonts are literal.
 
-ACElement ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> <small>\]</small> )
+ACElement ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> | <small>**AC\_Tag\_DIV**</small> <small>\]</small> )
 
-ACButton ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *action* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> <small>\]</small> )
+ACButton ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *action* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> | <small>**AC\_Tag\_DIV**</small> <small>\]</small> )
  
-ACCheckbox ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *label* <small>\]</small> <small>\[</small> , <small>**true**</small> | <small>**false**</small> <small>\]</small> <small>\[</small> , <small>**AC_Infront**</small> | <small>**AC_Behind**</small> <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> <small>\]</small> )
+ACCheckbox ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *label* <small>\]</small> <small>\[</small> , <small>**true**</small> | <small>**false**</small> <small>\]</small> <small>\[</small> , <small>**AC_Infront**</small> | <small>**AC_Behind**</small> <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> | <small>**AC\_Tag\_DIV**</small> <small>\]</small> )
 
-ACFile ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *label* <small>\]</small> <small>\[</small> , <small>**AC\_File\_FS**</small> | <small>**AC\_File\_SD**</small> | <small>**AC\_File\_Extern**</small> <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> <small>\]</small> )
+ACFile ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *label* <small>\]</small> <small>\[</small> , <small>**AC\_File\_FS**</small> | <small>**AC\_File\_SD**</small> | <small>**AC\_File\_Extern**</small> <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> | <small>**AC\_Tag\_DIV**</small> <small>\]</small> )
 
-ACInput ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *label* <small>\]</small> <small>\[</small> , *pattern* <small>\]</small> <small>\[</small> , *placeholder* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> <small>\]</small> <small>\[</small> , <small>**AC\_Input\_Text**</small> | <small>**AC\_Input\_Password**</small> | <small>**AC\_Input\_Number**</small> <small>\]</small>)
+ACInput ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *label* <small>\]</small> <small>\[</small> , *pattern* <small>\]</small> <small>\[</small> , *placeholder* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> | <small>**AC\_Tag\_DIV**</small> <small>\]</small> <small>\[</small> , <small>**AC\_Input\_Text**</small> | <small>**AC\_Input\_Password**</small> | <small>**AC\_Input\_Number**</small> <small>\]</small>)
 
-ACRadio ( *name* <small>\[</small> , *values* <small>\]</small> <small>\[</small> , *label* <small>\]</small> <small>\[</small> , <small>**AC\_Horizontal</small>** | <small>**AC\_Vertical**</small> <small>\]</small> <small>\[</small> , *checked* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> <small>\]</small> )
+ACRadio ( *name* <small>\[</small> , *values* <small>\]</small> <small>\[</small> , *label* <small>\]</small> <small>\[</small> , <small>**AC\_Horizontal</small>** | <small>**AC\_Vertical**</small> <small>\]</small> <small>\[</small> , *checked* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> | <small>**AC\_Tag\_DIV**</small> <small>\]</small> )
 
-ACSelect ( *name* <small>\[</small> , *options* <small>\]</small> <small>\[</small> , *label* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> <small>\]</small> )
+ACRange ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *label* <small>\]</small> <small>\[</small> , *min* <small>\]</small> <small>\[</small> , *max* <small>\]</small> <small>\[</small> , *step* </small> <small>]</small> <small>\[</small> , <small>**AC\_Infront**</small> | <small>**AC\_Behind**</small> | <small>**AC\_Void**</small> <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> | <small>**AC\_Tag\_DIV**</small> <small>\]</small> <small>\[</small> , *style* <small>]</small> )
+
+ACSelect ( *name* <small>\[</small> , *options* <small>\]</small> <small>\[</small> , *label* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> | <small>**AC\_Tag\_DIV**</small> <small>\]</small> )
 
 ACStyle ( *name* <small>\[</small> , *value* <small>\]</small> )
 
-ACSubmit ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *uri* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> <small>\]</small> )
+ACSubmit ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *uri* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> | <small>**AC\_Tag\_DIV**</small> <small>\]</small> )
 
-ACText ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *style* <small>\]</small> <small>\[</small> , *format* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> <small>\]</small> )
+ACText ( *name* <small>\[</small> , *value* <small>\]</small> <small>\[</small> , *style* <small>\]</small> <small>\[</small> , *format* <small>\]</small> <small>\[</small> , <small>**AC\_Tag\_None**</small> | <small>**AC\_Tag\_BR**</small> | <small>**AC\_Tag\_P**</small> | <small>**AC\_Tag\_DIV**</small> <small>\]</small> )
 
 !!! memo "Declaration macro usage"
     For example, *AutoConnectText* can be declared using macros.
