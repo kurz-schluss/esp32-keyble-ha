@@ -1,10 +1,10 @@
-#version 15-11-2023
+#version 22-12-2024
 #more info on https://github.com/kurz-schluss/esp32-keyble-ha
 #author: kurz-schluss
 
 mqtt:
   lock:
-    - name: Schloss Haustür
+    - name: Schloss Haustür Antrieb
       state_topic: "homeassistant/lock/door/state"
       command_topic: "homeassistant/lock/door/command"
       payload_lock: "3"
@@ -17,6 +17,7 @@ mqtt:
       state_jammed: "timeout"
       optimistic: false
 
+
   binary_sensor:
     - name: Schloss Haustür Batterie Status
       state_topic: "homeassistant/lock/door/battery"
@@ -28,7 +29,7 @@ mqtt:
       command_topic: "homeassistant/lock/door/command"
       payload_press: "1"
       device_class: update
-    - name: Neustart Esp32 Bridge
+    - name: Schloss Haustür Neustart Esp32 Bridge
       command_topic: "homeassistant/lock/door/command"
       payload_press: "7"
       device_class: restart
@@ -36,10 +37,10 @@ mqtt:
       command_topic: "homeassistant/lock/door/command"
       payload_press: "5"
       icon: mdi:toggle-switch
-    - name: Haustür öffnen
+    - name: Schloss Haustür öffnen
       command_topic: "homeassistant/lock/door/command"
       payload_press: "4"
-      icon: mdi:location-enter
+      icon: mdi:door-open
   sensor:
     - name: Aktivität RAW Schloss Haustür
       state_topic: "homeassistant/lock/door/task"
@@ -52,7 +53,7 @@ sensor:
   - platform: template
     sensors:
       zustand_schloss_haustur:
-        friendly_name: "Zustand Schloss Haustür"
+        friendly_name: "Schloss Haustür Zustand"
         value_template: >-
           {% if is_state('sensor.aktivitat_raw_schloss_haustur', 'waiting') %}
             Bereit
@@ -65,13 +66,11 @@ sensor:
           {% endif %}
         icon_template: >-
           {% if is_state('ssensor.aktivitat_raw_schloss_haustur', 'waiting') %}
-            mdi:home-lightning-bolt-outline
+            mdi:sleep
           {% elif is_state('sensor.aktivitat_raw_schloss_haustur', 'working') %}
-            mdi:hammer
+            mdi:cog
           {% elif is_state('sensor.aktivitat_raw_schloss_haustur', 'unknown') %}
             mdi:help-circle
           {% else %}
             mdi:home
           {% endif %}
-
-
