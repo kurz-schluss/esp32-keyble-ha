@@ -40,6 +40,7 @@
 WebServer Server;
 AutoConnect Portal(Server);
 AutoConnectConfig config;
+
 fs::SPIFFSFS& FlashFS = SPIFFS;
 
 eQ3* keyble;
@@ -67,7 +68,7 @@ const int PushButton = 0;
 
 //Default credentials for web server auth
 const char* www_username = "admin";
-const char* www_password = "esp32";
+const char* www_password = "XpGgavDITqZD";
 
 // allows you to set the realm of authentication Default:"Login Required"
 const char* www_realm = "Login Required (see README)";
@@ -461,7 +462,7 @@ void rootPage()
   {
     content +=
     "<h2 align=\"center\" style=\"color:green;margin:20px;\">Connected to: " + WiFi.SSID() + "</h2>"
-    "<h2 align=\"center\" style=\"color:green;margin:20px;\">Bride local IP: " + WiFi.localIP().toString() + "</h2>"
+    "<h2 align=\"center\" style=\"color:green;margin:20px;\">Bridge local IP: " + WiFi.localIP().toString() + "</h2>"
     "<h2 align=\"center\" style=\"color:green;margin:20px;\">Gateway IP: " + WiFi.gatewayIP().toString() + "</h2>"
     "<h2 align=\"center\" style=\"color:green;margin:20px;\">Netmask: " + WiFi.subnetMask().toString()  + "</h2>";
   }
@@ -608,6 +609,8 @@ void setup() {
   config.title = AP_TITLE;
   config.gateway = IPAddress(AP_IP);
   config.ota = AC_OTA_BUILTIN;
+  config.autoReconnect = true; //Reconnect automatically to a known SSID
+  config.reconnectInterval = 5; //Seek interval time is 150s
   Server.on("/", rootPage);
   Portal.config(config);
   
