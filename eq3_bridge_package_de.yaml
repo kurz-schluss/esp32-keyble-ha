@@ -74,3 +74,45 @@ sensor:
           {% else %}
             mdi:home
           {% endif %}
+
+automation:
+  - alias: "Türschloss alle 10 min Zustand abfragen " # check lock state every 10 minutes
+    description: ""
+    triggers:
+      - trigger: time_pattern
+        minutes: /10
+    conditions: []
+    actions:
+      - action: button.press
+        data: {}
+        target:
+          entity_id: button.schloss_haustur_abfragen
+    mode: single
+
+  - alias: "HA Start: Status Schloss" # check lock state at startup of HA
+    description: Status Schloss Haustür beim Start von Home Assistant abfragen
+    triggers:
+      - event: start
+        trigger: homeassistant
+    conditions: []
+    actions:
+      - action: button.press
+        metadata: {}
+        data: {}
+        target:
+          entity_id: button.schloss_haustur_abfragen
+    mode: single  
+  - alias: "Türschloss Benachrichtigung Batterie " # the lock is low on battery
+    description: Info an App
+    triggers:
+      - entity_id:
+          - binary_sensor.schloss_haustur_batterie_status
+        to: "on"
+        trigger: state
+    conditions: []
+    actions:
+      - action: notify.notify_all_mobile_devices # This is a custom group, please adjust to your needs
+        metadata: {}
+        data:
+          message: Batterie Türschloss fast leer!
+    mode: single
