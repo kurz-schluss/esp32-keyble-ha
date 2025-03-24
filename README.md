@@ -1,11 +1,16 @@
 # esp32-keyble-ha
-ESP32 port of the keyble library
-working, with some additions and Home Assistant Package for full integration!
+<h1>ESP32 port of the keyble library</h1>
+<h2>What is this for?</h2>
+
+The Eqiva eQ3 is a cheap but reliable smart lock that can be fitted to many doors. It has bluetooth connectivity and needs no external power supply. 
+But there is no direct interface to integrate this lock in your home automation setup. This port of the keyble library adds a bluetooth to WIFI bridge
+on a small ESP32 IOT device. Just place the ESP32 near the lock and add it to your local WLAN.
+
+The lock can be controlled via MQTT and integrated into Home Assistant.
 
 Thanks go to <a href="https://github.com/RoP09">RoP09</a>, <a href="https://github.com/tc-maxx">tc-maxx</a>, <a href="https://github.com/henfri">henfri</a>, <a href="https://github.com/MariusSchiffer">MariusSchiffer</a> and of course <a href="https://github.com/oyooyo">oyooyo</a> for their brillant work!
 
-
-Took RoP09/tc-maxx last update that was posted here: https://www.mikrocontroller.net/topic/458856#6650683 and here https://github.com/tc-maxx/esp32-keyble
+This is a fork from <a href"https://github.com/mccoy88f/esp32-keyble-ha">esp32-keyble-ha</a> from <a href="https://github.com/mccoy88f">mccoy88f</a> with some improvements.
 
 Fiddled around a bit to get it to run more stable.
 IF you have problem with wifi reconnect before flash in send this command in your terminal/shell changing port with yours:
@@ -33,7 +38,7 @@ Some changes/additions made:
 - serial outputs in english
 - boot button on the ESP32 board toggles the lock
 - changed partion table
-- NTP time synchronization for the auto-lock function that can be configured via the app
+- NTP time synchronization for the auto-lock function that can be configured via the app with NTP server and time zone
 
 Step by step setup:
 

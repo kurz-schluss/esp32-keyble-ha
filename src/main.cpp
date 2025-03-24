@@ -526,6 +526,7 @@ void SetWifi(bool active) {
     Serial.println("# WiFi enabled");
   }
   else {
+    WiFi.disconnect();
     WiFi.mode(WIFI_OFF);
     Serial.println("# WiFi disabled");
   }
@@ -610,7 +611,9 @@ void setup() {
   config.gateway = IPAddress(AP_IP);
   config.ota = AC_OTA_BUILTIN;
   config.autoReconnect = true; //Reconnect automatically to a known SSID
-  config.reconnectInterval = 5; //Seek interval time is 150s
+  config.reconnectInterval = 10; //Seek interval time for known WIFI is 5 min
+  config.portalTimeout = 300000; //For security reasons: Captive Portal is only active for 5 min after startup
+  config.autoReset = false;
   Server.on("/", rootPage);
   Portal.config(config);
   
