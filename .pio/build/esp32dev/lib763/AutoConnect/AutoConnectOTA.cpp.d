@@ -140,8 +140,9 @@
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/bootloader_support/include/esp_flash_partitions.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/bootloader_support/include/esp_app_format.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/cores/esp32/StreamString.h \
- .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectOTA.h \
- .pio/libdeps/esp32dev/AutoConnect/src/AutoConnect.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectExt.hpp \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectCoreImpl.hpp \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectCore.hpp \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFi.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/cores/esp32/Print.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/cores/esp32/IPv6Address.h \
@@ -210,7 +211,7 @@
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/DNSServer/src/DNSServer.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFiUdp.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/EEPROM/src/EEPROM.h \
- .pio/libdeps/esp32dev/PageBuilder@1.5.3/src/PageBuilder.h \
+ .pio/libdeps/esp32dev/PageBuilder/src/PageBuilder.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/FS/src/FS.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SPIFFS/src/SPIFFS.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectDefs.h \
@@ -224,18 +225,30 @@
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_wifi/include/esp_wifi_crypto_types.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_wifi/include/esp_private/wifi_os_adapter.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_wifi/include/esp_wifi_default.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SD/src/SD.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src/SPI.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-spi.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SD/src/sd_defines.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectFS.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/spiffs/include/esp_spiffs.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src/Preferences.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/nvs_flash/include/nvs.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectTicker.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/Ticker/src/Ticker.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectConfigBase.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectPageImpl.hpp \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/spi_flash/include/esp_spi_flash.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectAux.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectElement.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectElementBasis.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectUpload.h \
- lib/ArduinoJson/src/ArduinoJson.h lib/ArduinoJson/src/ArduinoJson.hpp \
- lib/ArduinoJson/src/ArduinoJson/Configuration.hpp \
+ .pio/libdeps/esp32dev/ArduinoJson/src/ArduinoJson.h \
+ .pio/libdeps/esp32dev/ArduinoJson/src/ArduinoJson.hpp \
+ .pio/libdeps/esp32dev/ArduinoJson/src/ArduinoJson/Configuration.hpp \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectElementJson.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectJsonDefs.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectConfigExt.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectOTA.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectUpdate.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/HTTPClient/src/HTTPClient.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFiClient.h \
@@ -279,6 +292,4 @@
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/hal/include/hal/aes_types.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/mbedtls/mbedtls/include/mbedtls/error.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/HTTPUpdate/src/HTTPUpdate.h \
- .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectFS.h \
- /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/spiffs/include/esp_spiffs.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectOTAPage.h

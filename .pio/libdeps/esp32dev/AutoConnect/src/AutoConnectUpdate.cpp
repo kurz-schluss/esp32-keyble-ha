@@ -1,9 +1,9 @@
 /**
  * AutoConnectUpdate class implementation.
- * @file   AutoConnectUpdate.cpp
+ * @file AutoConnectUpdate.cpp
  * @author hieromon@gmail.com
- * @version    1.3.4
- * @date   2022-02-03
+ * @version 1.4.0
+ * @date 2022-07-25
  * @copyright  MIT license.
  */
 
@@ -105,15 +105,6 @@ typename std::enable_if<!AutoConnectUtil::has_func_onProgress<T>::value, AutoCon
 }
 
 /**
- * Definitions of notification commands to synchronize update processing
- * with the Web client.
- */
-#define UPDATE_NOTIFY_START     "#s"
-#define UPDATE_NOTIFY_PROGRESS  "#p"
-#define UPDATE_NOTIFY_END       "#e"
-#define UPDATE_NOTIFY_REBOOT    "#r"
-
-/**
  * A destructor. Release the update processing dialogue page generated
  * as AutoConnectAux.
  */
@@ -130,7 +121,7 @@ AutoConnectUpdateAct::~AutoConnectUpdateAct() {
  * the AutoConnect which is the bedrock of the process.
  * @param  portal   A reference of AutoConnect
  */
-void AutoConnectUpdateAct::attach(AutoConnect& portal) {
+void AutoConnectUpdateAct::attach(AutoConnectExt<AutoConnectConfigExt>& portal) {
   AutoConnectAux* updatePage;
 
   updatePage = new AutoConnectAux(String(FPSTR(_pageCatalog.uri)), String(FPSTR(_pageCatalog.title)), _pageCatalog.menu);
@@ -255,7 +246,9 @@ void AutoConnectUpdateAct::handleUpdate(void) {
  */
 AC_UPDATESTATUS_t AutoConnectUpdateAct::update(void) {
   // Start update
-  String  uriBin = uri + '/' + _binName;
+  String  uriBin = '/' + _binName;
+  if (uri != ".")
+    uriBin = uri + '/' + _binName;
   if (_binName.length()) {
     WiFiClient  wifiClient;
     AC_DBG("%s:%d/%s update in progress...", host.c_str(), port, uriBin.c_str());
@@ -304,7 +297,7 @@ AC_UPDATESTATUS_t AutoConnectUpdateAct::update(void) {
  * received AutoConnectAux.
  * @param  aux        An instantiated AutoConnectAux that will configure according to ACPage_t.
  * @param  page       Pre-defined ACPage_t
- * @param  elementNum Number of AutoConnectElements to configure.  
+ * @param  elementNum Number of AutoConnectElements to configure.
  */
 void AutoConnectUpdateAct::_buildAux(AutoConnectAux* aux, const AutoConnectAux::ACPage_t* page, const size_t elementNum) {
   for (size_t n = 0; n < elementNum; n++) {
@@ -313,12 +306,13 @@ void AutoConnectUpdateAct::_buildAux(AutoConnectAux* aux, const AutoConnectAux::
       element->name = String(FPSTR(page->element[n].name));
       if (page->element[n].value)
         element->value = String(FPSTR(page->element[n].value));
-      aux->add(reinterpret_cast<AutoConnectElement&>(*element));
+      aux->add(*element);
     }
     else if (page->element[n].type == AC_Radio) {
       AutoConnectRadio* element = new AutoConnectRadio;
       element->name = String(FPSTR(page->element[n].name));
-      aux->add(reinterpret_cast<AutoConnectElement&>(*element));
+      element->post = AC_Tag_None;
+      aux->add(*element);
     }
     else if (page->element[n].type == AC_Submit) {
       AutoConnectSubmit* element = new AutoConnectSubmit;
@@ -327,7 +321,13 @@ void AutoConnectUpdateAct::_buildAux(AutoConnectAux* aux, const AutoConnectAux::
         element->value = String(FPSTR(page->element[n].value));
       if (page->element[n].peculiar)
         element->uri = String(FPSTR(page->element[n].peculiar));
-      aux->add(reinterpret_cast<AutoConnectElement&>(*element));
+      aux->add(*element);
+    }
+    else if (page->element[n].type == AC_Style) {
+      AutoConnectStyle* element = new AutoConnectStyle;
+      element->name = String(FPSTR(page->element[n].name));
+      element->value = String(FPSTR(page->element[n].value));
+      aux->add(*element);
     }
     else if (page->element[n].type == AC_Text) {
       AutoConnectText* element = new AutoConnectText;
@@ -336,7 +336,7 @@ void AutoConnectUpdateAct::_buildAux(AutoConnectAux* aux, const AutoConnectAux::
         element->value = String(FPSTR(page->element[n].value));
       if (page->element[n].peculiar)
         element->format = String(FPSTR(page->element[n].peculiar));
-      aux->add(reinterpret_cast<AutoConnectText&>(*element));
+      aux->add(*element);
     }
   }
 }
@@ -546,7 +546,7 @@ void AutoConnectUpdateAct::_progress(void) {
     reqOperand = _webServer->arg(reqOperation);
     switch (_status) {
     case UPDATE_IDLE:
-      if (reqOperand == String(UPDATE_NOTIFY_START)) {
+      if (reqOperand == String(AUTOCONNECT_UPDATE_NOTIFY_START)) {
         httpCode = 200;
         _status = UPDATE_START;
       }
@@ -556,7 +556,7 @@ void AutoConnectUpdateAct::_progress(void) {
       }
       break;
     case UPDATE_SUCCESS:
-      if (reqOperand == String(UPDATE_NOTIFY_REBOOT)) {
+      if (reqOperand == String(AUTOCONNECT_UPDATE_NOTIFY_REBOOT)) {
         _status = UPDATE_RESET;
         httpCode = 200;
       }
@@ -574,14 +574,14 @@ void AutoConnectUpdateAct::_progress(void) {
   case HTTP_GET:
     switch (_status) {
     case UPDATE_PROGRESS:
-      payload = String(UPDATE_NOTIFY_PROGRESS) + ',' + String(_amount) + ':' + String(_binSize); 
+      payload = String(AUTOCONNECT_UPDATE_NOTIFY_PROGRESS) + ',' + String(_amount) + ':' + String(_binSize);
       httpCode = 200;
       break;
     case UPDATE_IDLE:
     case UPDATE_SUCCESS:
     case UPDATE_NOAVAIL:
     case UPDATE_FAIL:
-      payload = String(UPDATE_NOTIFY_END);
+      payload = String(AUTOCONNECT_UPDATE_NOTIFY_END);
       httpCode = 200;
       break;
     default:

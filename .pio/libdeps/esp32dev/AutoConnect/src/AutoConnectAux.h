@@ -2,15 +2,14 @@
  * Declaration of AutoConnectAux basic class.
  * @file AutoConnectAux.h
  * @author hieromon@gmail.com
- * @version  1.3.4
- * @date 2022-02-24
- * @copyright  MIT license.
+ * @version 1.4.2
+ * @date 2023-01-25
+ * @copyright MIT license.
  */
 
 #ifndef _AUTOCONNECTAUX_H_
 #define _AUTOCONNECTAUX_H_
 
-#include "AutoConnectDefs.h"
 #include <vector>
 #include <memory>
 #include <functional>
@@ -19,11 +18,16 @@
 #include <Stream.h>
 #endif // !AUTOCONNECT_USE_JSON
 #include <PageBuilder.h>
-#include "AutoConnectElement.h"
+#include "AutoConnectDefs.h"
 #include "AutoConnectTypes.h"
+#include "AutoConnectElement.h"
+#include "AutoConnectConfigExt.h"
 
-class AutoConnect;  // Reference to avoid circular
-class AutoConnectAux;  // Reference to avoid circular
+// Reference to avoid circular.
+// AutoConnectAux is only enabled for AutoConnectExt.
+template<typename T>
+class AutoConnectExt;
+class AutoConnectAux;
 
 // Manage placed AutoConnectElement with a vector
 typedef std::vector<std::reference_wrapper<AutoConnectElement>> AutoConnectElementVT;
@@ -49,7 +53,7 @@ typedef enum {
  */
 class AutoConnectAux : public PageBuilder {
  public:
-  explicit AutoConnectAux(const String& uri = String(""), const String& title = String(""), const bool menu = true, const AutoConnectElementVT addons = AutoConnectElementVT(), const bool responsive = true);
+  explicit AutoConnectAux(const String& uri = String(""), const String& title = String(""), const bool menu = true, const AutoConnectElementVT addons = AutoConnectElementVT(), const bool responsive = true, const bool CORS = false);
   ~AutoConnectAux();
   AutoConnectElement& operator[](const char* name) { return *getElement(name); }
   AutoConnectElement& operator[](const __FlashStringHelper* name) { return *getElement(name); }
@@ -85,6 +89,7 @@ class AutoConnectAux : public PageBuilder {
     static_assert(std::is_base_of<AutoConnectUploadHandler, T>::value, "onUpload type must be inherited AutoConnectUploadHandler");
     _uploadHandler = std::bind(&T::upload, &uploadClass, std::placeholders::_1, std::placeholders::_2);
   }
+  AutoConnectAux& referer(void);
 
 #ifdef AUTOCONNECT_USE_JSON
   bool  load(PGM_P in, const size_t docSize = AUTOCONNECT_JSONDOCUMENT_SIZE);                       /**< Load whole elements to AutoConnectAux Page */
@@ -121,16 +126,18 @@ class AutoConnectAux : public PageBuilder {
  protected:
   void  upload(const String& requestUri, const HTTPUpload& upload);     /**< Uploader wrapper */
   void  _concat(AutoConnectAux& aux);                                   /**< Make up chain of AutoConnectAux */
-  virtual void  _join(AutoConnect& ac);                                 /**< Make a link to AutoConnect */
-  PageElement*  _setupPage(const String& uri);                          /**< AutoConnectAux page builder */
-  const String  _insertElement(PageArgument& args);                     /**< Insert a generated HTML to the page built by PageBuilder */
-  const String  _insertStyle(PageArgument& args);                       /**< Insert CSS style */
-  const String  _injectTitle(PageArgument& args) const { (void)(args); return _title; } /**< Returns title of this page to PageBuilder */
-  const String  _injectMenu(PageArgument& args);                        /**< Inject menu title of this page to PageBuilder */
-  const String  _indicateUri(PageArgument& args);                       /**< Inject the uri that caused the request */
+  String  _fetchEndpoint(PageArgument& args);
   const String  _indicateEncType(PageArgument& args);                   /**< Inject the ENCTYPE attribute */
+  const String  _indicateUri(PageArgument& args);                       /**< Inject the uri that caused the request */
+  const String  _injectMenu(PageArgument& args);                        /**< Inject menu title of this page to PageBuilder */
+  const String  _injectTitle(PageArgument& args) const { (void)(args); return _title; } /**< Returns title of this page to PageBuilder */
+  const String  _insertElement(PageArgument& args);                     /**< Insert a generated HTML to the page built by PageBuilder */
+  const String  _insertScript(PageArgument& args);                      /**< Insert post-javascript to the page built by PageBuilder */
+  const String  _insertStyle(PageArgument& args);                       /**< Insert CSS style */
+  virtual void  _join(AutoConnectExt<AutoConnectConfigExt>& ac);         /**< Make a link to AutoConnect */
   const String  _nonResponseExit(PageArgument& args);                   /**< Exit for responsive=false setting */
-  void  _storeElements(WebServerClass* webServer);                      /**< Store element values from contained in request arguments */
+  PageElement*  _setupPage(const String& uri);                          /**< AutoConnectAux page builder */
+  void  _storeElements(WebServer* webServer);                           /**< Store element values from contained in request arguments */
   template<typename T>
   bool  _isCompatible(const AutoConnectElement* element) const;         /**< Validate a type of AutoConnectElement entity conformity */
   static AutoConnectElement&  _nullElement(void);                       /**< A static returning value as invalid */
@@ -154,6 +161,7 @@ class AutoConnectAux : public PageBuilder {
    */
   template<typename T>
   bool _parseJson(T in, const size_t size) {
+    AC_UNUSED(size);
     ArduinoJsonBuffer jsonBuffer(AUTOCONNECT_JSONBUFFER_PRIMITIVE_SIZE);
   #if ARDUINOJSON_VERSION_MAJOR<=5
     JsonObject& jb = jsonBuffer.parseObject(in);
@@ -206,19 +214,21 @@ class AutoConnectAux : public PageBuilder {
   bool    _menu;                              /**< Switch for menu displaying */
   bool    _deletable = false;                 /**< Allow deleting itself. */
   bool    _responsive;                        /**< Whether suppress the sending of HTTP response in PageBuilder */
+  uint16_t  _contains;                        /**< Bitmask the type of elements this page contains */
   AC_AUTH_t _httpAuth = AC_AUTH_NONE;         /**< Applying HTTP authentication */
-  String  _uriStr;                            /**< uri as String */
   AutoConnectElementVT  _addonElm;            /**< A vector set of AutoConnectElements placed on this auxiliary page */
   AutoConnectAux*       _next = nullptr;      /**< Auxiliary pages chain list */
-  AutoConnect*          _ac = nullptr;        /**< Hosted AutoConnect instance */
+  AutoConnectExt<AutoConnectConfigExt>* _ac = nullptr;  /**< Hosted AutoConnect instance */
   AuxHandlerFunctionT   _handler;             /**< User sketch callback function when AutoConnectAux page requested. */
   AutoConnectExitOrder_t  _order;             /**< The order in which callback functions are called. */
-  PageBuilder::UploadFuncT    _uploadHandler; /**< The AutoConnectFile corresponding to current upload */
+  PageBuilder::UploadFuncT  _uploadHandler;   /**< The AutoConnectFile corresponding to current upload */
   AutoConnectFile*      _currentUpload;       /**< AutoConnectFile handling the current upload */
   static const char _PAGE_AUX[] PROGMEM;      /**< Auxiliary page template */
+  static const char _PAGE_SCRIPT_MA[] PROGMEM; /**< Auxiliary page javascript for ACRange */
+  static const char _PAGE_SCRIPT_FE[] PROGMEM; /**< Auxiliary page javascript for Fetch */
 
   // Protected members can be used from AutoConnect which handles AutoConnectAux pages.
-  friend class AutoConnect;
+  friend class AutoConnectExt<AutoConnectConfigExt>;
 };
 
 /**

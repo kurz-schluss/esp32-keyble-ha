@@ -218,7 +218,7 @@
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFiUdp.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/cores/esp32/Udp.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/cores/esp32/cbuf.h \
- lib/PubSubClient/src/PubSubClient.h \
+ .pio/libdeps/esp32dev/PubSubClient/src/PubSubClient.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_wifi/include/esp_wifi.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_wifi/include/esp_wifi_types.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_wifi/include/esp_private/esp_wifi_private.h \
@@ -237,31 +237,43 @@
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/FS/src/FS.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SPIFFS/src/SPIFFS.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnect.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectExtImpl.hpp \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectExt.hpp \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectCoreImpl.hpp \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectCore.hpp \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/DNSServer/src/DNSServer.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFiUdp.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/EEPROM/src/EEPROM.h \
- .pio/libdeps/esp32dev/PageBuilder@1.5.3/src/PageBuilder.h \
+ .pio/libdeps/esp32dev/PageBuilder/src/PageBuilder.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectDefs.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectTypes.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectPage.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectLabels.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectCredential.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SD/src/SD.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src/SPI.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-spi.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SD/src/sd_defines.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectFS.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/spiffs/include/esp_spiffs.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src/Preferences.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/nvs_flash/include/nvs.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectTicker.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/Ticker/src/Ticker.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectConfigBase.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectPageImpl.hpp \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/spi_flash/include/esp_spi_flash.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectAux.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectElement.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectElementBasis.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectUpload.h \
- lib/ArduinoJson/src/ArduinoJson.h lib/ArduinoJson/src/ArduinoJson.hpp \
- lib/ArduinoJson/src/ArduinoJson/Configuration.hpp \
+ .pio/libdeps/esp32dev/ArduinoJson/src/ArduinoJson.h \
+ .pio/libdeps/esp32dev/ArduinoJson/src/ArduinoJson.hpp \
+ .pio/libdeps/esp32dev/ArduinoJson/src/ArduinoJson/Configuration.hpp \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectElementJson.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectJsonDefs.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectConfigExt.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectOTA.h \
- .pio/libdeps/esp32dev/AutoConnect/src/AutoConnect.h \
- .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectFS.h \
- /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/spiffs/include/esp_spiffs.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectUpdate.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/HTTPClient/src/HTTPClient.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src/WiFiClientSecure.h \

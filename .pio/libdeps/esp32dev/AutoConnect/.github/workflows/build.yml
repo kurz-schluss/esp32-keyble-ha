@@ -19,6 +19,9 @@ env:
     - source-path: ./
     - name: PageBuilder
     - name: PubSubClient
+    - source-url: https://github.com/me-no-dev/AsyncTCP.git
+    - source-url: https://github.com/me-no-dev/ESPAsyncTCP.git
+    - source-url: https://github.com/me-no-dev/ESPAsyncWebServer.git
 
   SKETCHES_PATH: examples
 
@@ -27,6 +30,7 @@ env:
     Credential
     Elements
     FileUpload
+    FetchLED
     HandleClient
     HandlePortal
     HandlePortalEX
@@ -37,6 +41,9 @@ env:
     Simple
     Update
     WebUpdate
+
+  SKETCHES_V6_JSON: |
+    WebSocketServer
 
   SKETCHES_WO_JSON: |
     mqttRSSI_NA
@@ -89,7 +96,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Append sketches depending on ESP8266
         if: matrix.board.platform-name == 'esp8266:esp8266'
@@ -105,6 +112,13 @@ jobs:
           echo "${{ env.SKETCHES }}${{ env.SKETCHES_WO_JSON }}${{ env.SKETCHES_ESP32 }}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
+      - name: Include sketches dependent on ArduinoJson V6
+        if: matrix.library.name == 'ArduinoJsonV6'
+        run: |
+          echo "BUILD_SKETCHES<<EOF" >> $GITHUB_ENV
+          echo "${{ env.BUILD_SKETCHES }}${{ env.SKETCHES_V6_JSON }}" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Create sketches list
         run: |
           echo "BUILD_SKETCHES_LIST<<EOF" >> $GITHUB_ENV
@@ -114,8 +128,12 @@ jobs:
       - name: Compile example sketches that require ArduinoJson
         uses: arduino/compile-sketches@v1
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           fqbn: ${{ matrix.board.fqbn }}
           platforms: ${{ matrix.platforms }}
+          cli-compile-flags: |
+            - --build-property
+            - compiler.cpp.extra_flags=-Wno-error=unused-function -Wno-error=unused-variable -Wno-error=deprecated-declarations -Wno-unused-parameter -Wno-sign-compare
           libraries: |
             ${{ env.LIBRARIES }}
             ${{ matrix.library.dependency }}
@@ -151,7 +169,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Create sketches list with precluded ArduinoJson
         run: |
@@ -162,11 +180,14 @@ jobs:
       - name: Compile example sketches w/o ArduinoJson
         uses: arduino/compile-sketches@v1
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           fqbn: ${{ matrix.board.fqbn }}
           platforms: ${{ matrix.platforms }}
           cli-compile-flags: |
             - --build-property
             - build.extra_flags=-DAUTOCONNECT_NOUSE_JSON
+            - --build-property
+            - compiler.cpp.extra_flags=-Wno-error=unused-function -Wno-error=unused-variable -Wno-error=deprecated-declarations -Wno-unused-parameter -Wno-sign-compare
           libraries: |
             ${{ env.LIBRARIES }}
           enable-deltas-report: true

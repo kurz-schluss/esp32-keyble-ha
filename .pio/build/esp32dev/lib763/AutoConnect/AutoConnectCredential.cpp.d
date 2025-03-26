@@ -179,6 +179,14 @@
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_wifi/include/esp_wifi_crypto_types.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_wifi/include/esp_private/wifi_os_adapter.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_wifi/include/esp_wifi_default.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SD/src/SD.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/FS/src/FS.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src/SPI.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-spi.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SD/src/sd_defines.h \
  .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectDefs.h \
+ .pio/libdeps/esp32dev/AutoConnect/src/AutoConnectFS.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/SPIFFS/src/SPIFFS.h \
+ /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/spiffs/include/esp_spiffs.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src/Preferences.h \
  /home/prof/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/nvs_flash/include/nvs.h

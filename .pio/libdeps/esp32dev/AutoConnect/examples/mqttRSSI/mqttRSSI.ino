@@ -7,14 +7,6 @@ for New User Account and create a New Channel via My Channels.
 For details, please refer to the project page.
 https://hieromon.github.io/AutoConnect/howtoembed.html#used-with-mqtt-as-a-client-application
 
-This example presents the simplest OTA Updates scheme.
-When building this sketch, you may receive a compilation error message
-similar to the following:
-- text section exceeds available space in board
-This cause is the small text block size of the predetermined partition
-table. You can avoid this error by selecting Partition Scheme: from
-Arduino IDE's Tool menu and applying Minimal SPIFFS.
-
 This example is based on the environment as of March 20, 2018.
 Copyright (c) 2020 Hieromon Ikasamo.
 This software is released under the MIT License.
@@ -27,41 +19,56 @@ https://opensource.org/licenses/MIT
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266mDNS.h>
-#include <LittleFS.h>
 #define FORMAT_ON_FAIL
-#define GET_CHIPID()    (ESP.getChipId())
-#define GET_HOSTNAME()  (WiFi.hostname())
+#define mDNSUpdate()  do {MDNS.update();} while (0)
 using WiFiWebServer = ESP8266WebServer;
-FS& FlashFS = LittleFS;
-
+const uint8_t LED_ACTIVE = LOW;
 #elif defined(ARDUINO_ARCH_ESP32)
 #include <WiFi.h>
 #include <WebServer.h>
 #include <HTTPClient.h>
 #include <ESPmDNS.h>
-#include <FS.h>
-#include <SPIFFS.h>
 #define FORMAT_ON_FAIL  true
-#define GET_CHIPID()    ((uint16_t)(ESP.getEfuseMac()>>32))
-#define GET_HOSTNAME()  (WiFi.getHostname())
+#define mDNSUpdate() do {(void)0;} while(0)
 using WiFiWebServer = WebServer;
-fs::SPIFFSFS& FlashFS = SPIFFS;
+const uint8_t LED_ACTIVE = HIGH;
 #endif
 
 #include <PubSubClient.h>
 #include <AutoConnect.h>
 
-const char* PARAM_FILE      = "/param.json";
-const char* AUX_SETTING_URI = "/mqtt_setting";
-const char* AUX_SAVE_URI    = "/mqtt_save";
-const char* AUX_CLEAR_URI   = "/mqtt_clear";
+#ifdef AUTOCONNECT_USE_LITTLEFS
+#include <LittleFS.h>
+#if defined(ARDUINO_ARCH_ESP8266)
+FS& FlashFS = LittleFS;
+#elif defined(ARDUINO_ARCH_ESP32)
+fs::LittleFSFS& FlashFS = LittleFS;
+#endif
+#else
+#include <FS.h>
+#include <SPIFFS.h>
+fs::SPIFFSFS& FlashFS = SPIFFS;
+#endif
+
+#ifndef LED_BUILTIN
+#pragma message("Warning, LED_BUILTIN is undefined. Assumes Pin #2.")
+#define LED_BUILTIN 2
+#endif
+
+// URLs assigned to the custom web page.
+const char* PARAM_FILE       = "/param.json";
+const char* URL_MQTT_HOME    = "/";
+const char* URL_MQTT_SETTING = "/mqtt_setting";
+const char* URL_MQTT_START   = "/mqtt_start";
+const char* URL_MQTT_CLEAR   = "/mqtt_clear";
+const char* URL_MQTT_STOP    = "/mqtt_stop";
 
 // JSON definition of AutoConnectAux.
 // Multiple AutoConnectAux can be defined in the JSON array.
 // In this example, JSON is hard-coded to make it easier to understand
 // the AutoConnectAux API. In practice, it will be an external content
 // which separated from the sketch, as the mqtt_RSSI_FS example shows.
-static const char AUX_mqtt_setting[] PROGMEM = R"raw(
+static const char AUX_MQTT[] PROGMEM = R"*(
 [
   {
     "title": "MQTT Setting",
@@ -71,54 +78,82 @@ static const char AUX_mqtt_setting[] PROGMEM = R"raw(
       {
         "name": "style",
         "type": "ACStyle",
-        "value": "label+input,label+select{position:sticky;left:120px;width:230px!important;box-sizing:border-box;}"
+        "value": "label+input,label+select{position:sticky;left:140px;width:204px!important;box-sizing:border-box;}"
       },
       {
         "name": "header",
-        "type": "ACText",
-        "value": "<h2>MQTT broker settings</h2>",
-        "style": "text-align:center;color:#2f4f4f;padding:10px;"
+        "type": "ACElement",
+        "value": "<h2 style='text-align:center;color:#2f4f4f;margin-top:10px;margin-bottom:10px'>MQTT Broker settings</h2>"
       },
       {
         "name": "caption",
         "type": "ACText",
-        "value": "Publishing the WiFi signal strength to MQTT channel. RSSI value of ESP8266 to the channel created on ThingSpeak",
-        "style": "font-family:serif;color:#4682b4;"
+        "value": "Publish WiFi signal strength via MQTT, publishing the RSSI value of the ESP module to the ThingSpeak public channel.",
+        "style": "font-family:serif;color:#053d76",
+        "posterior": "par"
       },
       {
         "name": "mqttserver",
         "type": "ACInput",
         "label": "Server",
         "pattern": "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$",
-        "placeholder": "MQTT broker server"
+        "placeholder": "MQTT broker server",
+        "global": true
+      },
+      {
+        "name": "apikey",
+        "type": "ACInput",
+        "label": "User API Key",
+        "global": true
       },
       {
         "name": "channelid",
         "type": "ACInput",
         "label": "Channel ID",
-        "pattern": "^[0-9]{6}$"
+        "pattern": "^[0-9]{6}$",
+        "global": true
       },
       {
-        "name": "userkey",
+        "name": "writekey",
         "type": "ACInput",
-        "label": "User Key"
+        "label": "Write API Key",
+        "global": true
       },
       {
-        "name": "apikey",
-        "type": "ACInput",
-        "label": "API Key"
-      },
-      {
-        "name": "newline",
+        "name": "nl1",
         "type": "ACElement",
         "value": "<hr>"
       },
       {
-        "name": "uniqueid",
-        "type": "ACCheckbox",
-        "value": "unique",
-        "label": "Use APID unique",
-        "checked": false
+        "name": "credential",
+        "type": "ACText",
+        "value": "MQTT Device Credentials",
+        "style": "font-weight:bold;color:#1e81b0",
+        "posterior": "div"
+      },
+      {
+        "name": "clientid",
+        "type": "ACInput",
+        "label": "Client ID",
+        "global": true
+      },
+      {
+        "name": "username",
+        "type": "ACInput",
+        "label": "Username",
+        "global": true
+      },
+      {
+        "name": "password",
+        "type": "ACInput",
+        "label": "Password",
+        "apply": "password",
+        "global": true
+      },
+      {
+        "name": "nl2",
+        "type": "ACElement",
+        "value": "<hr>"
       },
       {
         "name": "period",
@@ -129,69 +164,116 @@ static const char AUX_mqtt_setting[] PROGMEM = R"raw(
           "180 sec."
         ],
         "label": "Update period",
-        "arrange": "vertical"
+        "arrange": "vertical",
+        "global": true
       },
       {
         "name": "hostname",
         "type": "ACInput",
         "value": "",
         "label": "ESP host name",
-        "pattern": "^([a-zA-Z0-9]([a-zA-Z0-9-])*[a-zA-Z0-9]){1,24}$"
+        "pattern": "^([a-zA-Z0-9]([a-zA-Z0-9-])*[a-zA-Z0-9]){1,24}$",
+        "global": true
       },
       {
         "name": "save",
         "type": "ACSubmit",
         "value": "Save&amp;Start",
-        "uri": "/mqtt_save"
+        "uri": "/mqtt_start"
       },
       {
         "name": "discard",
         "type": "ACSubmit",
         "value": "Discard",
         "uri": "/"
+      },
+      {
+        "name": "stop",
+        "type": "ACSubmit",
+        "value": "Stop publishing",
+        "uri": "/mqtt_stop"
       }
     ]
   },
   {
     "title": "MQTT Setting",
-    "uri": "/mqtt_save",
+    "uri": "/mqtt_start",
     "menu": false,
     "element": [
       {
-        "name": "caption",
+        "name": "c1",
+        "type": "ACText",
+        "value": "<h4>MQTT publishing has started.</h4>",
+        "style": "text-align:center;color:#2f4f4f;padding:5px;"
+      },
+      {
+        "name": "c2",
         "type": "ACText",
         "value": "<h4>Parameters saved as:</h4>",
-        "style": "text-align:center;color:#2f4f4f;padding:10px;"
+        "style": "text-align:center;color:#2f4f4f;padding:5px;"
       },
       {
         "name": "mqttserver",
         "type": "ACText",
         "format": "Server: %s",
-        "posterior": "br"
+        "posterior": "br",
+        "global": true
+      },
+      {
+        "name": "apikey",
+        "type": "ACText",
+        "format": "User API Key: %s",
+        "posterior": "br",
+        "global": true
       },
       {
         "name": "channelid",
         "type": "ACText",
         "format": "Channel ID: %s",
-        "posterior": "br"
+        "posterior": "br",
+        "global": true
       },
       {
-        "name": "userkey",
+        "name": "writekey",
         "type": "ACText",
-        "format": "User Key: %s",
-        "posterior": "br"
+        "format": "Write API Key: %s",
+        "posterior": "br",
+        "global": true
       },
       {
-        "name": "apikey",
+        "name": "clientid",
         "type": "ACText",
-        "format": "API Key: %s",
-        "posterior": "br"
+        "format": "Client ID: %s",
+        "posterior": "br",
+        "global": true
+      },
+      {
+        "name": "username",
+        "type": "ACText",
+        "format": "Username: %s",
+        "posterior": "br",
+        "global": true
+      },
+      {
+        "name": "password",
+        "type": "ACText",
+        "format": "Password: %s",
+        "posterior": "br",
+        "global": true
+      },
+      {
+        "name": "hostname",
+        "type": "ACText",
+        "format": "ESP host: %s",
+        "posterior": "br",
+        "global": true
       },
       {
         "name": "period",
         "type": "ACText",
-        "format": "Update period: %s sec.",
-        "posterior": "br"
+        "format": "Update period: %s",
+        "posterior": "br",
+        "global": true
       },
       {
         "name": "clear",
@@ -200,9 +282,21 @@ static const char AUX_mqtt_setting[] PROGMEM = R"raw(
         "uri": "/mqtt_clear"
       }
     ]
+  },
+  {
+    "title": "MQTT Setting",
+    "uri": "/mqtt_clear",
+    "menu": false,
+    "response": false
+  },
+  {
+    "title": "MQTT Setting",
+    "uri": "/mqtt_stop",
+    "menu": false,
+    "response": false
   }
 ]
-)raw";
+)*";
 
 WiFiWebServer server;
 AutoConnect   portal(server);
@@ -210,68 +304,46 @@ AutoConnectConfig config;
 WiFiClient    wifiClient;
 PubSubClient  mqttClient(wifiClient);
 
-String  apId;
-String  hostName;
-
-String  serverName;
+// ThingSpeak channel parameters for MQTT publishing.
+// This example defines these parameters as input fields for a custom web page,
+// allowing manipulation by the Web UI. For more information on the ThingSpeak
+// channel and MQTT API, refer to the followings:
+// https://www.mathworks.com/help/thingspeak/collect-data-in-a-new-channel.html
+// https://www.mathworks.com/help/thingspeak/mqtt-api.html
+String  mqttServer;
+String  apikey;
 String  channelId;
-String  userKey;
-String  apiKey;
-bool  uniqueid;
-unsigned long publishInterval = 0;
-const char* userId = "anyone";
+String  writekey;
+String  clientId;
+String  username;
+String  password;
+String  hostname;
 
-unsigned long lastPub = 0;
-unsigned long lastAttempt = 0;
-const unsigned long attemptInterval = 3000;
-bool  reconnect = false;
-int   retry;
+// A variety of control variables to keep message publishing periodic.
 
-bool mqttConnect() {
-  static const char alphanum[] =
-    "0123456789"
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz";  // For random generation of client ID.
-  char  clientId[9];
-  bool  rc;
+// Indicates the message publishing status. ESP module will continue to send
+// messages periodically when enablePublish is true. `auxMQTTStop` handler
+// can be false with a stop publish operation via the `/mqtt_stop` web page.
+bool  enablePublish = false;
 
-  rc = serverName.length() > 0;
-  if (rc) {
-    // Attempts to connect to the MQTT broker based on a valid server name.
-    mqttClient.setServer(serverName.c_str(), 1883);
-    Serial.println(String("Attempting MQTT broker:") + serverName);
+// publishInterval holds the millisecond cycle for message publishing. The
+// `/mqtt_setting` custom web page allows you to change this interval value via
+// `auxMQTTSetting` handler.
+unsigned long publishInterval;
+unsigned long nextPeriod;
 
-    // Changing the client ID each time you open a session with a broker is
-    // important for publishing continuity. Sessions interrupted by
-    // communication anomalies are thrown away and do not interfere with
-    // subsequent publications.
-    uint8_t i = 0;
-    while (i < sizeof(clientId))
-      clientId[i++] = alphanum[random(sizeof(alphanum))];
-    clientId[i - 1] = '\0';
+// This example allows communication retries between the ESP module and the
+// ThingSpeak channel. The retry interval and a maximum number of attempts are
+// delegated to `retryInterval` and `maxRetryCount` values.
+const unsigned long retryInterval = 5000;
+const int maxRetryCount = 3;
+int   retryCount;
 
-    rc = mqttClient.connect(clientId, userId, userKey.c_str());
-    if (rc)
-      Serial.println("Established:" + String(clientId));
-    else
-      Serial.println("Connection failed:" + String(mqttClient.state()));
-  }
-  return rc;
-}
+// On-board LED on the ESP module blinks during message publishing. ledBlinking
+// measures the elapsed milliseconds of the ON/OFF cycle.
+unsigned long ledBlinking;
 
-bool mqttPublish(const String& endPoint, const String& payload) {
-  // By checking the connection with the broker at the time of the publish
-  // request, it can delegate the reconnection attempt to the loop function.
-  // This strategy eliminates handling the delay that occurs during the
-  // broker reconnection attempt loop and smoothes AutoConnect communication
-  // with the client.
-  reconnect = !mqttClient.connected();
-  if (!reconnect)
-    return mqttClient.publish(endPoint.c_str(), payload.c_str());
-  else
-    return false;
-}
-
+// Measure WiFi signal strength
 int getStrength(uint8_t points) {
   uint8_t sc = points;
   long    rssi = 0;
@@ -283,32 +355,38 @@ int getStrength(uint8_t points) {
   return points ? static_cast<int>(rssi / points) : 0;
 }
 
-void getParams(AutoConnectAux& aux) {
-  serverName = aux[F("mqttserver")].value;
-  serverName.trim();
-  channelId = aux[F("channelid")].value;
-  channelId.trim();
-  userKey = aux[F("userkey")].value;
-  userKey.trim();
-  apiKey = aux[F("apikey")].value;
-  apiKey.trim();
+// Reflects the loaded channel settings to global variables; the publishMQTT
+// function uses those global variables to actuate ThingSpeak MQTT API.
+void setParams(AutoConnectAux& aux) {
+  mqttServer = aux[F("mqttserver")].as<AutoConnectInput>().value;
+  apikey = aux[F("apikey")].as<AutoConnectInput>().value;
+  channelId = aux[F("channelid")].as<AutoConnectInput>().value;
+  writekey = aux[F("writekey")].as<AutoConnectInput>().value;
+  clientId = aux[F("clientid")].as<AutoConnectInput>().value;
+  username = aux[F("username")].as<AutoConnectInput>().value;
+  password = aux[F("password")].as<AutoConnectInput>().value;
   AutoConnectRadio& period = aux[F("period")].as<AutoConnectRadio>();
   publishInterval = period.value().substring(0, 2).toInt() * 1000;
-  uniqueid = aux[F("uniqueid")].as<AutoConnectCheckbox>().checked;
-  hostName = aux[F("hostname")].value;
-  hostName.trim();
+  hostname = aux[F("hostname")].as<AutoConnectInput>().value;
 }
 
-// Load parameters saved with saveParams from SPIFFS into the
-// elements defined in /mqtt_setting JSON.
-String loadParams(AutoConnectAux& aux, PageArgument& args) {
-  (void)(args);
+// Loads previously saved ThingSpeak channel parameters from the file system at
+// the start of publishing.
+bool loadParams(AutoConnectAux& aux) {
+  bool  rc = false;
+
   Serial.print(PARAM_FILE);
   File param = FlashFS.open(PARAM_FILE, "r");
   if (param) {
+    // These parameters are stored as JSON definitions in AutoConnectElements,
+    // so the AutoConnectAux::loadElement function can be applied to restore.
     if (aux.loadElement(param)) {
-      getParams(aux);
+
+      // Reflects the loaded channel settings to global variables; the publishMQTT
+      // function uses those global variables to actuate ThingSpeak MQTT API.
+      setParams(aux);
       Serial.println(" loaded");
+      rc = true;
     }
     else
       Serial.println(" failed to load");
@@ -316,35 +394,198 @@ String loadParams(AutoConnectAux& aux, PageArgument& args) {
   }
   else
     Serial.println(" open failed");
-  return String("");
+  return rc;
 }
 
-// Save the value of each element entered by '/mqtt_setting' to the
-// parameter file. The saveParams as below is a callback function of
-// /mqtt_save. When invoking this handler, the input value of each
-// element is already stored in '/mqtt_setting'.
-// In the Sketch, you can output to stream its elements specified by name.
-String saveParams(AutoConnectAux& aux, PageArgument& args) {
-  // The 'where()' function returns the AutoConnectAux that caused
-  // the transition to this page.
-  AutoConnectAux&   mqtt_setting = *portal.aux(portal.where());
-  getParams(mqtt_setting);
+// Bind the mDNS service to the http server launched by the ESP module.
+void startMDNS(void) {
+  if (!hostname.length())
+    hostname = WiFi.getHostname();
+  else
+    WiFi.setHostname(hostname.c_str());
 
-  // The entered value is owned by AutoConnectAux of /mqtt_setting.
-  // To retrieve the elements of /mqtt_setting, it is necessary to get
-  // the AutoConnectAux object of /mqtt_setting.
+  Serial.printf("mDNS responder %s.local start\n", hostname.c_str());
+  if (MDNS.begin(hostname.c_str())) {
+    if (!MDNS.addService("http", "tcp", 80))
+      Serial.println("mDNS service adding failed");
+  }
+  else
+    Serial.println("mDNS failed");
+}
+
+// Start MQTT message publishing.
+void startMQTT() {
+  // Set MQTT broker endpoint to PubSubClient.
+  Serial.printf("Starting MQTT, interval %lu, ", publishInterval);
+  enablePublish = true;
+  nextPeriod = millis();
+  retryCount = 0;
+  mqttClient.setServer(mqttServer.c_str(), 1883);
+
+  // Rebind mDNS service with `hostname`.
+  if (!hostname.equalsIgnoreCase(String(WiFi.getHostname()))) {
+    MDNS.end();
+    startMDNS();
+  }
+
+  // Prepare the GPIO port for LED blinking.
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, !LED_ACTIVE);
+  ledBlinking = millis();
+}
+
+// Publish a message with RSSI contained in the payload to the MQTT broker.
+bool publishMQTT() {
+  bool  inPublish = true;
+
+  if (mqttServer.length()) {
+    if (millis() > nextPeriod) {
+      // Attempts to connect to the MQTT broker based on a valid server name.
+      // mqttClient.setServer(mqtt.data.server.c_str(), 1883);
+      if (!mqttClient.connected()) {
+        Serial.println(String("Attempting MQTT broker:") + mqttServer);
+        if ((inPublish = mqttClient.connect(clientId.c_str(), username.c_str(), password.c_str())))
+          Serial.println("Established:" + clientId);
+        else
+          Serial.print("Connection failed:" + String(mqttClient.state()));
+      }
+
+      if (inPublish) {
+        String  topic = String("channels/") + channelId + String("/publish");
+        String  message = String("field1=") + String(getStrength(7));
+        mqttClient.publish(topic.c_str(), message.c_str());
+        inPublish = mqttClient.loop();
+        if (!inPublish)
+          Serial.print("MQTT publishing failed");
+      }
+
+      // If the message is successfully published, the connection to the MQTT
+      // broker is disconnected and the interval is extended until the next
+      // publishing turn.
+      if (inPublish) {
+        mqttClient.disconnect();
+        nextPeriod = millis() + publishInterval;
+        retryCount = 0;
+      }
+      else {
+        // Error retry. By varying the interval until the next turn of the
+        // process called, the processMQTT performs an error retry without an
+        // internal loop.
+        if (retryCount++ < maxRetryCount) {
+          nextPeriod = millis() + retryInterval;
+          Serial.printf("...retrying %d\n", retryCount);
+        }
+        else {
+          nextPeriod = millis() + publishInterval;
+          retryCount = 0;
+          Serial.println(", retries exceeded, abandoned.");
+        }
+      }
+    }
+  }
+
+  // The post-process is the LED blinking control. Stops LED flashing if message
+  // publish fails.
+  if (inPublish) {
+    if (millis() - ledBlinking > 500) {
+      digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+      ledBlinking = millis();
+    }
+  }
+  else
+    digitalWrite(LED_BUILTIN, !LED_ACTIVE);
+
+  return inPublish;
+}
+
+// Temporarily stops message publishing; transmission will be suspended until
+// resumed by the startMQTT function.
+void endMQTT() {
+  mqttClient.disconnect();
+  enablePublish = false;
+  digitalWrite(LED_BUILTIN, !LED_ACTIVE);
+  Serial.println("MQTT publishing stopped\n");
+}
+
+// The behavior of the auxMQTTSetting function below transfers the MQTT API
+// parameters to the value of each AutoConnectInput element on the custom web
+// page. (i.e., displayed as preset values)
+String auxMQTTSetting(AutoConnectAux& aux, PageArgument& args) {
+  aux[F("mqttserver")].as<AutoConnectInput>().value = mqttServer;
+  aux[F("apikey")].as<AutoConnectInput>().value = apikey;
+  aux[F("channelid")].as<AutoConnectInput>().value = channelId;
+  aux[F("writekey")].as<AutoConnectInput>().value = writekey;
+  aux[F("clientid")].as<AutoConnectInput>().value = clientId;
+  aux[F("username")].as<AutoConnectInput>().value = username;
+  aux[F("password")].as<AutoConnectInput>().value = password;
+  aux[F("hostname")].as<AutoConnectInput>().value = hostname;
+  aux[F("period")].as<AutoConnectRadio>().checked = publishInterval / (30 * 1000);
+  if (aux[F("period")].as<AutoConnectRadio>().checked > 3)
+    aux[F("period")].as<AutoConnectRadio>().checked = 3;
+  return String();
+}
+
+// Get the connection settings entered in `/mqtt_setting` via `/mqtt_start` and
+// save them to mqtt parameters.
+String auxMQTTStart(AutoConnectAux& aux, PageArgument& args) {
+  // The next step is to pass the transition source of `/mqtt_start` page to
+  // match the argument interface of the setParams function.
+  // `AutoConnectAux::referer` function can identify the AutoConnectAux that
+  // caused the page transition to that AutoConnectAux.
+  AutoConnectAux& mqtt_setting = aux.referer();
+  setParams(mqtt_setting);
+
+  // Save the value of each element entered by '/mqtt_setting' to the
+  // parameter file. The saveParams as below is a callback function of
+  // /mqtt_save. When invoking this handler, the input value of each
+  // element is already stored in '/mqtt_setting'.
+  // In the Sketch, you can output to stream its elements specified by name.
   File param = FlashFS.open(PARAM_FILE, "w");
-  mqtt_setting.saveElement(param, {"mqttserver", "channelid", "userkey", "apikey", "uniqueid", "period", "hostname"});
-  param.close();
+  if (param) {
+    mqtt_setting.saveElement(param, {"mqttserver", "apikey", "channelid", "writekey", "clientid", "username", "password", "period", "hostname"});
+    param.close();
+  }
+  else
+    Serial.printf("Save to %s open failed\n", PARAM_FILE);
 
-  // Echo back saved parameters to AutoConnectAux page.
-  AutoConnectInput& mqttserver = mqtt_setting[F("mqttserver")].as<AutoConnectInput>();
-  aux[F("mqttserver")].value = serverName + String(mqttserver.isValid() ? " (OK)" : " (ERR)");
-  aux[F("channelid")].value = channelId;
-  aux[F("userkey")].value = userKey;
-  aux[F("apikey")].value = apiKey;
-  aux[F("period")].value = String(publishInterval / 1000);
+  // Restart MQTT publishing.
+  startMQTT();
 
+  return String();
+}
+
+// Stops MQTT publishing.
+// `mqtt_stop` does not respond to http content as a web page. It stops MQTT
+// publishing and then navigates the client to redirect to the root page.
+// To suppress page content response by AutoConnect, `/mqtt_stop` has a
+// `response:false` attribute.
+String auxMQTTStop(AutoConnectAux& aux, PageArgument& args) {
+  endMQTT();
+  aux.redirect(URL_MQTT_HOME);
+  return String();
+}
+
+// Clear the channel data on ThingSpeak.
+String auxMQTTClear(AutoConnectAux& aux, PageArgument& args) {
+  HTTPClient  httpClient;
+
+  String  endpoint = mqttServer;
+  endpoint.replace("mqtt3", "api");
+  String  delUrl = "http://" + endpoint + "/channels/" + channelId + "/feeds.json?api_key=" + apikey;
+
+  Serial.print("DELETE " + delUrl);
+  if (httpClient.begin(wifiClient, delUrl)) {
+    Serial.print(":");
+    int resCode = httpClient.sendRequest("DELETE");
+    const String& res = httpClient.getString();
+    Serial.println(String(resCode) + String(",") + res);
+    httpClient.end();
+  }
+  else
+    Serial.println(" failed");
+
+  // After clearing the channel data, it transitions to the home page.
+  aux.redirect(URL_MQTT_HOME);
   return String();
 }
 
@@ -365,30 +606,9 @@ void handleRoot() {
   server.send(200, "text/html", content);
 }
 
-// Clear channel using ThingSpeak's API.
-void handleClearChannel() {
-  HTTPClient  httpClient;
-
-  String  endpoint = serverName;
-  endpoint.replace("mqtt", "api");
-  String  delUrl = "http://" + endpoint + "/channels/" + channelId + "/feeds.json?api_key=" + userKey;
-
-  Serial.print("DELETE " + delUrl);
-  if (httpClient.begin(wifiClient, delUrl)) {
-    Serial.print(":");
-    int resCode = httpClient.sendRequest("DELETE");
-    const String& res = httpClient.getString();
-    Serial.println(String(resCode) + String(",") + res);
-    httpClient.end();
-  }
-  else
-    Serial.println(" failed");
-
-  // Returns the redirect response. The page is reloaded and its contents
-  // are updated to the state after deletion.
-  server.sendHeader("Location", String("http://") + server.client().localIP().toString() + String("/"));
-  server.send(302, "text/plain", "");
-  server.client().stop();
+void wifiConnect(IPAddress& ip) {
+  Serial.println("WiFi connected:" + WiFi.SSID());
+  Serial.println("IP:" + WiFi.localIP().toString());
 }
 
 void setup() {
@@ -398,85 +618,46 @@ void setup() {
 
   FlashFS.begin(FORMAT_ON_FAIL);
 
-  if (portal.load(FPSTR(AUX_mqtt_setting))) {
-    PageArgument  args;
-    AutoConnectAux& mqtt_setting = *portal.aux(AUX_SETTING_URI);
-    loadParams(mqtt_setting, args);
-    if (uniqueid) {
-      config.apid = "ESP-" + String(GET_CHIPID(), HEX);
-      Serial.println("apid set to " + config.apid);
-    }
-    if (hostName.length()) {
-      config.hostName = hostName;
-      Serial.println("hostname set to " + config.hostName);
-    }
-    portal.on(AUX_SETTING_URI, loadParams);
-    portal.on(AUX_SAVE_URI, saveParams);
-  }
-  else
-    Serial.println("load error");
-
   // Assign the captive portal popup screen to the URL as the root path.
-  server.on("/", handleRoot);
-  server.on(AUX_CLEAR_URI, handleClearChannel);
-  config.homeUri = "/";
-  config.bootUri = AC_ONBOOTURI_HOME;
-
   // Reconnect and continue publishing even if WiFi is disconnected.
+  config.homeUri = URL_MQTT_HOME;
+  config.bootUri = AC_ONBOOTURI_HOME;
   config.autoReconnect = true;
   config.reconnectInterval = 1;
   portal.config(config);
 
-  Serial.print("WiFi ");
-  if (portal.begin()) {
-    Serial.println("connected:" + WiFi.SSID());
-    Serial.println("IP:" + WiFi.localIP().toString());
-    Serial.print("mDNS responder ");
-    if (MDNS.begin(GET_HOSTNAME())) {
-      MDNS.addService("http", "tcp", 80);
-      Serial.println("started");
-    }
-    else
-      Serial.println("setting up failed");
-  }
-  else {
-    Serial.println("connection failed:" + String(WiFi.status()));
-    Serial.println("Needs WiFi connection to start publishing messages");
-  }
+  // Load AutoConnectAux pages described with JSON description.
+  // Its custom web page definition has the following four pages combined into
+  // one using a JSON array:
+  portal.load(FPSTR(AUX_MQTT));
+  portal.on(URL_MQTT_SETTING, auxMQTTSetting);
+  portal.on(URL_MQTT_START, auxMQTTStart);
+  portal.on(URL_MQTT_CLEAR, auxMQTTClear);
+  portal.on(URL_MQTT_STOP, auxMQTTStop);
+
+  // Restore saved MQTT broker setting values.
+  // This example stores all setting parameters as a set of AutoConnectElement,
+  // so they can be restored in bulk using `AutoConnectAux::loadElement`.
+  AutoConnectAux& settings_mqtt = *portal.aux(URL_MQTT_SETTING);
+  loadParams(settings_mqtt);
+
+  // This home page is the response content by requestHandler with WebServer,
+  // it does not go through AutoConnect. Such pages register requestHandler
+  // directly using `WebServer::on`.
+  server.on(URL_MQTT_HOME, handleRoot);
+
+  portal.onConnect(wifiConnect);
+  portal.begin();
+
+  // Start services
+  startMDNS();
+  startMQTT();
 }
 
 void loop() {
-  if (WiFi.status() == WL_CONNECTED && publishInterval > 0) {
-    if (reconnect) {
-      // Attempts to reconnect with the broker do not involve a delay.
-      // The reconnect interval is realized as the measurement of elapsed
-      // time using the millis function.
-      if (millis() - lastAttempt > attemptInterval) {
-        reconnect = !mqttConnect();
-        lastAttempt = millis();
-        if (++retry >= 3) {
-          retry = 0;
-          reconnect = false;
-        }
-      }
-    }
-    else {
-      // It is not the delay function that produces the publish interval.
-      // Using delay inside a loop function is deprecated for web server
-      // sketches. It blocks HTTP request replies.
-      // The publish interval is guaranteed by measuring the elapsed time.
-      if (millis() - lastPub > publishInterval) {
-        String  topic = String("channels/") + channelId + String("/publish/") + apiKey;
-        String  message = String("field1=") + String(getStrength(7));
-        mqttPublish(topic, message);
-        lastPub = millis();
-      }
-      mqttClient.loop();
-    }
-  }
+  if (enablePublish)
+    publishMQTT();
 
-#ifdef ARDUINO_ARCH_ESP8266
-  MDNS.update();
-#endif
   portal.handleClient();
+  mDNSUpdate();
 }

@@ -7,29 +7,40 @@
 
   This example demonstrates the typical behavior of AutoConnectElement.
   It also represents a basic structural frame for saving and reusing
-  values ​​entered in a custom web page into flash.
+  values entered in a custom web page into flash.
 */
 
 // To properly include the suitable header files to the target platform.
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
-#include <LittleFS.h>
-using WebServerClass = ESP8266WebServer;
-FS& FlashFS = LittleFS;
+#include <ESP8266HTTPClient.h>
+#include <ESP8266mDNS.h>
 #define FORMAT_ON_FAIL
-
+using WebServerClass = ESP8266WebServer;
 #elif defined(ARDUINO_ARCH_ESP32)
 #include <WiFi.h>
 #include <WebServer.h>
-#include <FS.h>
-#include <SPIFFS.h>
-using WebServerClass = WebServer;
-fs::SPIFFSFS& FlashFS = SPIFFS;
+#include <HTTPClient.h>
+#include <ESPmDNS.h>
 #define FORMAT_ON_FAIL  true
+using WebServerClass = WebServer;
 #endif
 
 #include <AutoConnect.h>
+
+#ifdef AUTOCONNECT_USE_LITTLEFS
+#include <LittleFS.h>
+#if defined(ARDUINO_ARCH_ESP8266)
+FS& FlashFS = LittleFS;
+#elif defined(ARDUINO_ARCH_ESP32)
+fs::LittleFSFS& FlashFS = LittleFS;
+#endif
+#else
+#include <FS.h>
+#include <SPIFFS.h>
+fs::SPIFFSFS& FlashFS = SPIFFS;
+#endif
 
 #define PARAM_FILE      "/elements.json"
 #define USERNAME        "username_you_wish"   // For HTTP authentication
@@ -50,7 +61,8 @@ static const char PAGE_ELEMENTS[] PROGMEM = R"(
       "name": "text",
       "type": "ACText",
       "value": "AutoConnect element behaviors collection",
-      "style": "font-family:Arial;font-size:18px;font-weight:400;color:#191970"
+      "style": "font-family:Arial;font-size:18px;font-weight:400;color:#191970",
+      "posterior": "div"
     },
     {
       "name": "check",
@@ -158,12 +170,14 @@ static const char PAGE_SAVE[] PROGMEM = R"(
     {
       "name": "validated",
       "type": "ACText",
-      "style": "color:red"
+      "style": "color:red",
+      "posterior": "div"
     },
     {
       "name": "echo",
       "type": "ACText",
-      "style": "font-family:monospace;font-size:small;white-space:pre;"
+      "style": "font-family:monospace;font-size:small;white-space:pre;",
+      "posterior": "div"
     },
     {
       "name": "ok",
@@ -216,7 +230,7 @@ void setup() {
 
   saveAux.load(FPSTR(PAGE_SAVE));
   saveAux.on([] (AutoConnectAux& aux, PageArgument& arg) {
-    // You can validate input values ​​before saving with
+    // You can validate input values before saving with
     // AutoConnectInput::isValid function.
     // Verification is using performed regular expression set in the
     // pattern attribute in advance.

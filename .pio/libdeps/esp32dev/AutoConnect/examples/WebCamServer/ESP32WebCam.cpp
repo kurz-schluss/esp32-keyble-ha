@@ -1,6 +1,6 @@
 /*
   ESP32 Camera Sensor Web interface class implementation.
-  Date: 2021-12-28
+  Date: 2022-12-28, Updated: 2022-07-27
   
   Copyright (c) 2021 Hieromon Ikasamo.
   This software is released under the MIT License.
@@ -112,7 +112,7 @@ esp_err_t ESP32WebCam::startCameraServer(const char* streamPath, const char* cap
   esp_err_t rc;
 
   if (_stream_d) { // The HTTP server is already up and running.
-    ESP_LOGE(ESP32CAM_LOGE_TAG, "HTTP server is already started");
+    log_i("httpd has already started\n");
     return ESP_FAIL;
   }
 
@@ -154,34 +154,43 @@ esp_err_t ESP32WebCam::startCameraServer(const char* streamPath, const char* cap
       .uri = _streamPath.c_str(),
       .method = HTTP_GET,
       .handler = ESP32WebCam::_streamHandler,
-      .user_ctx = nullptr
+      .user_ctx = nullptr,
+      .is_websocket = false,
+      .handle_ws_control_frames = false,
+      .supported_subprotocol = nullptr
     };
     // Register captureUrl handler
     httpd_uri_t captureUri = {
       .uri = _capturePath.c_str(),
       .method = HTTP_GET,
       .handler = ESP32WebCam::_captureHandler,
-      .user_ctx = nullptr
+      .user_ctx = nullptr,
+      .is_websocket = false,
+      .handle_ws_control_frames = false,
+      .supported_subprotocol = nullptr
     };
     // Register promptUrl handler
     httpd_uri_t promptUri = {
       .uri = _promptPath.c_str(),
       .method = HTTP_GET,
       .handler = ESP32WebCam::_promptHandler,
-      .user_ctx = nullptr
+      .user_ctx = nullptr,
+      .is_websocket = false,
+      .handle_ws_control_frames = false,
+      .supported_subprotocol = nullptr
     };
     rc = httpd_register_uri_handler(_stream_d, &captureUri);
     if (rc != ESP_OK)
-      ESP_LOGE(ESP32CAM_LOGE_TAG, "%s handler could not register 0x%04x", _capturePath.c_str(), rc);
+      log_e("%s handler could not register 0x%04x\n", _capturePath.c_str(), rc);
     rc = httpd_register_uri_handler(_stream_d, &promptUri);
     if (rc != ESP_OK)
-      ESP_LOGE(ESP32CAM_LOGE_TAG, "%s handler could not register 0x%04x", _promptPath.c_str(), rc);
+      log_e("%s handler could not register 0x%04x\n", _promptPath.c_str(), rc);
     rc = httpd_register_uri_handler(_stream_d, &streamUri);
     if (rc != ESP_OK)
-      ESP_LOGE(ESP32CAM_LOGE_TAG, "%s handler could not register 0x%04x", _streamPath.c_str(), rc);
+      log_e("%s handler could not register 0x%04x\n", _streamPath.c_str(), rc);
   }
   else
-    ESP_LOGE(ESP32CAM_LOGE_TAG, "%s httpd could not start 0x%04x", ESP32CAM_GLOBAL_IDENTIFIER, rc);
+    log_e("httpd could not start 0x%04x\n", rc);
 
   return rc;
 }
@@ -218,7 +227,7 @@ esp_err_t ESP32WebCam::_sendResponse(httpd_req_t* req, uint16_t status, const ch
   httpd_resp_set_type(req, mime);
   httpd_resp_set_hdr(req, ESP32WebCam::_ACCESS_CONTROL_ALLOW_ORIGIN, "*");
   if (status > 299) {
-    ESP_LOGE(ESP32CAM_LOGE_TAG, "%s", body);
+    log_e("%s\n", body);
   }
   return httpd_resp_send(req, body, bodyLen);
 }

@@ -17,6 +17,7 @@
 */
 
 #include <esp32-hal.h>
+#include <esp32-hal-log.h>
 #include <img_converters.h>
 #include "ESP32Cam.h"
 #include "ESP32Cam_pins.h"
@@ -66,10 +67,6 @@ ESP32Cam::~ESP32Cam() {
  * @param  model  The model ID of the sensor to be used.
  */
 esp_err_t ESP32Cam::init(const CameraId model) {
-  // Allow output log depending on CORE_DEBUG_LOG macro identifier using
-  // the esp-idf component.
-  esp_log_level_set("*", ESP_LOG_ERROR);
-
   // Identify the valid pin-map that a model parameter represent.
   _cameraId = CAMERA_MODEL_UNKNOWN;
   for (uint8_t id = 0; id < (sizeof(_pinsMap) / sizeof(_pinsMap[0])); id++) {
@@ -99,8 +96,13 @@ esp_err_t ESP32Cam::init(const CameraId model) {
   config.pin_pclk = _pins->pclk_gpio_num;
   config.pin_vsync = _pins->vsync_gpio_num;
   config.pin_href = _pins->href_gpio_num;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 2)
+  config.pin_sccb_sda = _pins->siod_gpio_num;
+  config.pin_sccb_scl = _pins->sioc_gpio_num;
+#else
   config.pin_sscb_sda = _pins->siod_gpio_num;
   config.pin_sscb_scl = _pins->sioc_gpio_num;
+#endif
   config.pin_pwdn = _pins->pwdn_gpio_num;
   config.pin_reset = _pins->reset_gpio_num;
   config.xclk_freq_hz = ESP32CAM_XCLK_FREQ;
@@ -113,11 +115,19 @@ esp_err_t ESP32Cam::init(const CameraId model) {
     config.frame_size = FRAMESIZE_UXGA;
     config.jpeg_quality = 10;
     config.fb_count = 2;
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR>=4
+    config.fb_location = CAMERA_FB_IN_PSRAM;
+    config.grab_mode = CAMERA_GRAB_LATEST;
+#endif
   } else {
     _psram = false;
     config.frame_size = FRAMESIZE_SVGA;
     config.jpeg_quality = 12;
     config.fb_count = 1;
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR>=4
+    config.fb_location = CAMERA_FB_IN_DRAM;
+    config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+#endif
   }
 
   // The pull-up required for wiring for ESP_EYE, but has not been verified.
@@ -143,7 +153,7 @@ esp_err_t ESP32Cam::init(const CameraId model) {
     }
   }
   else
-    ESP_LOGE(ESP32CAM_LOGE_TAG, ESP32CAM_NVS_KEYNAME " init failed 0x%04x", err);
+    log_e("Camera %d init failed 0x%04x\n", (int)_cameraId, err);
 
   // Create semaphore to inform us when the timer has fired
   ESP32Cam_internal::xMutex = xSemaphoreCreateMutex();
@@ -602,7 +612,7 @@ void ESP32Cam::_timerShot(const unsigned long period, const char* filenamePrefix
  */
 void IRAM_ATTR ESP32Cam::_timerShotISR(void) {
   if (xTaskCreateUniversal(&ESP32Cam::_timerShotTask, ESP32CAM_GLOBAL_IDENTIFIER, ESP32CAM_TIMERTASK_STACKSIZE, (void*)ESP32Cam_internal::esp32cam, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE) != pdPASS) {
-    ESP_LOGE(ESP32CAM_LOGE_TAG, ESP32CAM_GLOBAL_IDENTIFIER " timerShot task failed");
+    log_e("TimerShot task failed\n");
   }
 }
 
@@ -749,7 +759,7 @@ bool ESP32Cam::_autoMount(const SDType_t sdType, fs::FS* sdFile) {
       rc = sd->begin();
     else {
       if (!sd->open(_mountProbe, FILE_WRITE)) {
-        ESP_LOGV("SD mount point may have been removed, remounting\n");
+        log_d("SD mount removed, remounting\n");
         sd->end();
         rc = sd->begin();
       }
@@ -766,7 +776,7 @@ bool ESP32Cam::_autoMount(const SDType_t sdType, fs::FS* sdFile) {
       rc = sdmmc->begin();
     else {
       if (!sdmmc->open(_mountProbe, FILE_WRITE)) {
-        ESP_LOGV("SDMMC mount point may have been removed, remounting\n");
+        log_d("SDMMC mount removed, remounting\n");
         sdmmc->end();
         rc = sdmmc->begin();
       }
@@ -833,13 +843,13 @@ esp_err_t ESP32Cam::_export(const char* filename, camera_fb_t* frameBuffer) {
         esp_camera_fb_return(frameBuffer);
         return rc;
       }
-      ESP_LOGE(ESP32CAM_LOGE_TAG, "SD %s open failed\n", fn);
+      log_e("SD %s open failed\n", fn);
       rc = ESP_ERR_NOT_FOUND;
     }
     esp_camera_fb_return(frameBuffer);
   }
   else {
-    ESP_LOGE(ESP32CAM_LOGE_TAG, "failed to esp_camera_fb_get\n");
+    log_e("failed to esp_camera_fb_get\n");
     rc = ESP_FAIL;
   }
 

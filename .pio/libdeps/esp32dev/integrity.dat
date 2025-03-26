@@ -1,4 +1,4 @@
-AutoConnect @ 1.3.4
-PubSubClient
-PageBuilder @ 1.5.3
-ESP32 BLE Arduino @ 2.0.0
+hieromon/AutoConnect@^1.4.2
+bblanchon/ArduinoJson@^7.3.1
+hieromon/PageBuilder@^1.5.6
+knolleary/PubSubClient@^2.8

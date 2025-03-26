@@ -2,12 +2,12 @@
  * Implementation of AutoConnectAux class.
  * @file AutoConnectAux.cpp
  * @author hieromon@gmail.com
- * @version  1.3.2
- * @date 2021-12-22
- * @copyright  MIT license.
+ * @version 1.4.2
+ * @date 2023-01-30
+ * @copyright MIT license.
  */
 #include <algorithm>
-#include "AutoConnect.h"
+#include "AutoConnectExt.hpp"
 #include "AutoConnectAux.h"
 #include "AutoConnectUploadImpl.h"
 #include "AutoConnectElementBasisImpl.h"
@@ -34,13 +34,19 @@ const char AutoConnectAux::_PAGE_AUX[] PROGMEM = {
   "{{CSS_UL}}"
   "{{CSS_INPUT_BUTTON}}"
   "{{CSS_INPUT_TEXT}}"
-  "{{CSS_LUXBAR}}"
+  "{{CSS_LUXBAR_BODY}}"
+  "{{CSS_LUXBAR_HEADER}}"
+  "{{CSS_LUXBAR_BGR}}"
+  "{{CSS_LUXBAR_ANI}}"
+  "{{CSS_LUXBAR_MEDIA}}"
+  "{{CSS_LUXBAR_ITEM}}"
   "{{AUX_CSS}}"
   "</style>"
   "</head>"
   "<body style=\"padding-top:58px;\">"
   "<div class=\"container\">"
   "{{MENU_PRE}}"
+  "{{MENU_LIST}}"
   "{{MENU_AUX}}"
   "{{MENU_POST}}"
   "<div class=\"base-panel\"><div class=\"aux-page\">"
@@ -53,25 +59,84 @@ const char AutoConnectAux::_PAGE_AUX[] PROGMEM = {
   "</div>"
   "<script>"
   "function _bu(url) {"
-  "var uri=document.createElement('input');"
-  "uri.setAttribute('type','hidden');"
-  "uri.setAttribute('name','" AUTOCONNECT_AUXURI_PARAM "');"
-  "uri.setAttribute('value','{{AUX_URI}}');"
-  "var fm=document.getElementById('_aux');"
-  "fm.appendChild(uri);"
+  "let fm=document.getElementById('_aux');"
+  "let uri=document.getElementById('_aux_uri');"
+  "if (uri===null) {"
+    "uri=document.createElement('input');"
+    "uri.id='_aux_uri';"
+    "uri.type='hidden';"
+    "uri.name='" AUTOCONNECT_AUXURI_PARAM "';"
+    "uri.value='{{AUX_URI}}';"
+    "fm.append(uri);"
+  "}"
   "fm.action=url;"
   "return fm;"
   "}"
-  "function _sa(url) {"
+  "function " AUTOCONNECT_AUXSCRIPT_SUBMIT "(url) {"
   "_bu(url).submit();"
   "}"
-  "function _ma(el,pos) {"
-  "var mag=pos=='p'?el.previousElementSibling:el.nextElementSibling;"
-  "mag.innerText=el.value;"
-  "}"
+  "{{POSTSCRIPT}}"
   "</script>"
   "</body>"
   "</html>"
+};
+
+const char AutoConnectAux::_PAGE_SCRIPT_MA[] PROGMEM = {
+  "function " AUTOCONNECT_AUXSCRIPT_RANGEVALUE "(el,pos) {"
+  "let mag=pos=='p'?el.previousElementSibling:el.nextElementSibling;"
+  "mag.innerText=el.value;"
+  "}"
+};
+
+const char AutoConnectAux::_PAGE_SCRIPT_FE[] PROGMEM = {
+  "function _ff(url, elm) {"
+    "let ff=_bu(url);"
+    "let src=document.getElementById('_fe_id');"
+    "if (src===null) {"
+      "src=document.createElement('input');"
+      "src.id='_fe_id';"
+      "src.type='hidden';"
+      "src.name='" AUTOCONNECT_FETCHELEMENT_PARAM "';"
+      "ff.append(src);"
+    "}"
+    "src.value=elm.name;"
+    "return ff;"
+  "}"
+  "async function " AUTOCONNECT_AUXSCRIPT_FETCH "(org) {"
+    "const ep='" AUTOCONNECT_URI_FETCH "';"
+    "const fd=new FormData(_ff(ep, org));"
+    "try {"
+      "const res=await fetch(ep, {"
+        "method:'POST',"
+        "mode:'no-cors',"
+        "body:fd"
+      "});"
+      "if (res.status!==200) {"
+        "throw `response.status:${res.status} ${res.statusText}`;"
+      "}"
+      "const json=await res.json();"
+      "json.forEach(re=>{"
+        "let elm=document.getElementById(re.id);"
+        "if (elm!==null)"
+          "_ite(elm, re);"
+      "});"
+      "return true;"
+    "} catch (e) {"
+#ifdef AC_DEBUG
+      "alert(e);"
+#endif      
+      "console.log(e);"
+    "}"
+  "}"
+  "function _ite(tag, elr) {"
+    "for (const prop in elr) {"
+      "if (prop!=='id') {"
+        "if (typeof elr[prop]=='object')"
+          "_ite(tag[prop], elr[prop]);"
+        "else tag[prop]=elr[prop];"
+      "}"
+    "}"
+  "}"
 };
 
 /**
@@ -82,17 +147,17 @@ const char AutoConnectAux::_PAGE_AUX[] PROGMEM = {
  * @param addons  Vector of AutoConnect Element that the page contains.
  * @param responsive  This AUX page will response the built HTML via PageBuilder.
  */
-AutoConnectAux::AutoConnectAux(const String& uri, const String& title, const bool menu, const AutoConnectElementVT addons, const bool responsive)
+AutoConnectAux::AutoConnectAux(const String& uri, const String& title, const bool menu, const AutoConnectElementVT addons, const bool responsive, const bool CORS)
     : _title(title),
       _menu(menu),
       _responsive(responsive),
-      _uriStr(uri),
       _addonElm(addons),
       _handler(nullptr),
       _order(AC_EXIT_AHEAD),
       _uploadHandler(nullptr) {
-  _uri = _uriStr.c_str();
+  _uri = uri;
   transferEncoding(PageBuilder::TransferEncoding_t::AUTOCONNECT_HTTP_TRANSFER);
+  enableCORS(CORS);
 }
 
 /**
@@ -101,7 +166,6 @@ AutoConnectAux::AutoConnectAux(const String& uri, const String& title, const boo
  */
 AutoConnectAux::~AutoConnectAux() {
   _addonElm.clear();
-  _addonElm.swap(_addonElm);
 }
 
 /**
@@ -137,14 +201,14 @@ void AutoConnectAux::add(AutoConnectElementVT addons) {
  * the value of AutoConnectElements carried by AutoConnectAux.
  */
 void AutoConnectAux::fetchElement(void) {
-  WebServerClass*  _webServer = _ac->_webServer.get();
+  WebServer*  _webServer = _ac->_webServer.get();
   if (_webServer->hasArg(String(F(AUTOCONNECT_AUXURI_PARAM)))) {
     _ac->_auxUri = _webServer->arg(String(F(AUTOCONNECT_AUXURI_PARAM)));
     _ac->_auxUri.replace("&#47;", "/");
     AC_DBG("fetch %s", _ac->_auxUri.c_str());
     AutoConnectAux* aux = _ac->_aux;
     while (aux) {
-      if (aux->_uriStr == _ac->_auxUri) {
+      if (aux->_uri == _ac->_auxUri) {
         // Save the value owned by each element contained in the POST body
         // of a current HTTP request to AutoConnectElements.
         aux->_storeElements(_webServer);
@@ -230,7 +294,7 @@ bool AutoConnectAux::isValid(void) const {
 void AutoConnectAux::redirect(const char* url) {
   String  location(url);
 
-  WebServerClass* _webServer = _ac->_webServer.get();
+  WebServer* _webServer = _ac->_webServer.get();
   _webServer->sendHeader(String(F("Location")), location, true);
   _webServer->send(302, String(F("text/plain")), "");
   _webServer->client().stop();
@@ -338,7 +402,7 @@ bool AutoConnectAux::setElementValue(const String& name, std::vector<String> con
  */
 void AutoConnectAux::upload(const String& requestUri, const HTTPUpload& upload) {
   if (upload.status == UPLOAD_FILE_START) {
-    AC_DBG("%s requests upload to %s\n", requestUri.c_str(), _uriStr.c_str());
+    AC_DBG("%s requests upload to %s\n", requestUri.c_str(), _uri.c_str());
     // Selects a valid upload handler before uploading starts.
     // Identify AutoConnectFile with the current upload request and
     // save the value and mimeType attributes.
@@ -348,7 +412,7 @@ void AutoConnectAux::upload(const String& requestUri, const HTTPUpload& upload) 
     AutoConnectElementVT  addons;
     AutoConnectAux* aux = _ac->_aux;
     while (aux) {
-      if (aux->_uriStr == requestUri) {
+      if (aux->_uri == requestUri) {
         addons = aux->_addonElm;
         break;
       }
@@ -381,6 +445,14 @@ void AutoConnectAux::upload(const String& requestUri, const HTTPUpload& upload) 
     if (_currentUpload)
       if (_currentUpload->attach(_currentUpload->store)) {
         _upload = std::bind(&AutoConnectUploadHandler::upload, _currentUpload->upload(), std::placeholders::_1, std::placeholders::_2);
+        if (_currentUpload->exitStart())
+          _currentUpload->upload()->onStart(_currentUpload->exitStart());
+        if (_currentUpload->exitEnd())
+          _currentUpload->upload()->onEnd(_currentUpload->exitEnd());
+        if (_currentUpload->exitError())
+          _currentUpload->upload()->onError(_currentUpload->exitError());
+        if (_currentUpload->exitProgress())
+          _currentUpload->upload()->onProgress(_currentUpload->exitProgress());
         AC_DBG_DUMB("attached(%d)\n", (int)_currentUpload->store);
       }
 
@@ -410,6 +482,25 @@ void AutoConnectAux::upload(const String& requestUri, const HTTPUpload& upload) 
 }
 
 /**
+ * Returns a reference to the AutoConnectAux from which this AutoConnectAux
+ * was called.
+ * @return a reference to the AutoConnectAux from which this AutoConnectAux
+ * was called. If the source of the transition is not an AutoConnectAux page,
+ * it returns a reference to itself. 
+ */
+AutoConnectAux& AutoConnectAux::referer(void) {
+  AutoConnectAux* referer = nullptr;
+
+  if (_ac)
+    referer = _ac->aux(_ac->where());
+
+  if (referer)
+    return *referer;
+  else
+    return *this;
+}
+
+/**
  * Concatenates subsequent AutoConnectAux pages starting from oneself 
  * to the chain list. 
  * AutoConnectAux is collected in the chain list and each object is 
@@ -432,7 +523,7 @@ void AutoConnectAux::_concat(AutoConnectAux& aux) {
  * registers AutoConnect in the following AutoConnectAux chain list.
  * @param  ac    A reference of AutoConnect.
  */
-void AutoConnectAux::_join(AutoConnect& ac) {
+void AutoConnectAux::_join(AutoConnectExt<AutoConnectConfigExt>& ac) {
   _ac = &ac;
 
   // Chain to subsequent AutoConnectAux in the list.
@@ -463,7 +554,7 @@ const String AutoConnectAux::_injectMenu(PageArgument& args) {
  */
 const String AutoConnectAux::_indicateUri(PageArgument& args) {
   AC_UNUSED(args);
-  String  lastUri = _uriStr;
+  String  lastUri = _uri;
   // The following code contains adding and trimming a blank that is
   // wasteful for this function. It exists for avoiding the bug of
   // WString::replace of ESP8266 arduino core 2.5.2.
@@ -491,7 +582,7 @@ const String AutoConnectAux::_indicateEncType(PageArgument& args) {
     if (elm.typeOf() == AC_File) {
       return String(F("enctype='multipart/form-data'"));
     }
-  return AutoConnect::_emptyString;
+  return AutoConnectExt<AutoConnectConfigExt>::_emptyString;
 }
 
 /**
@@ -504,7 +595,7 @@ const String AutoConnectAux::_insertElement(PageArgument& args) {
   String  body = String("");
 
   // When WebServerClass::handleClient calls RequestHandler, the parsed
-  //  http argument has been prepared.
+  // http argument has been prepared.
   // If the current request argument contains AutoConnectElement, it is
   // the form data of the AutoConnectAux page and with this timing save
   // the value of each element.
@@ -519,7 +610,12 @@ const String AutoConnectAux::_insertElement(PageArgument& args) {
   }
 
   // Generate HTML for all AutoConnectElements contained in the page.
+  _contains = 0x0000;
   for (AutoConnectElement& addon : _addonElm) {
+    if (addon.typeOf() != AC_Unknown)
+      // Set the type of current AutoConnectElement
+      _contains = _contains | (0b1 << (uint16_t)addon.typeOf());
+
     // Since the style sheet has already drained at the time of the
     // _insertElement function call, it skips the call to the HTML
     // generator by each element.
@@ -536,6 +632,33 @@ const String AutoConnectAux::_insertElement(PageArgument& args) {
     }
   }
   return body;
+}
+
+/**
+ * Insert the JavaScript required for the dynamic behavior of the elements
+ * contained in the page at the tail of the page.
+ * AutoConnectRange and AutoConnectFile require JavaScript; if an AutoConnectAux
+ * page has these elements, the AutoConnectAux handler will automatically insert
+ * the JavaScript necessary for its operation.
+ * @param  args  A reference of PageArgument but unused.
+ * @return HTML string that should be inserted.
+ */
+const String AutoConnectAux::_insertScript(PageArgument& args) {
+  AC_UNUSED(args);
+  String  postscript;
+
+  // Insert a script that advances the progress bar of uploading progress.
+  if ((_contains >> (uint16_t)AC_Range) & 0b1)
+    postscript += String(FPSTR(_PAGE_SCRIPT_MA));
+
+  // Insert Fetch
+  for (AutoConnectElement& elm : _addonElm)
+    if (elm.canHandle()) {
+      postscript += String(FPSTR(_PAGE_SCRIPT_FE));
+      break;
+    }
+
+  return postscript;
 }
 
 /**
@@ -558,7 +681,7 @@ const String AutoConnectAux::_nonResponseExit(PageArgument& args) {
 
   // Response sending cancellation due to responsive=false setting.
   _ac->_responsePage->cancel();
-  return AutoConnect::_emptyString;
+  return AutoConnectExt<AutoConnectConfigExt>::_emptyString;
 }
 
 /**
@@ -567,6 +690,7 @@ const String AutoConnectAux::_nonResponseExit(PageArgument& args) {
  * @return HTML string that should be inserted.
  */
 const String AutoConnectAux::_insertStyle(PageArgument& args) {
+  AC_UNUSED(args);
   String  css = String("");
 
   for (AutoConnectElement& elm : _addonElm) {
@@ -594,7 +718,7 @@ PageElement* AutoConnectAux::_setupPage(const String& uri) {
         elm = _next->_setupPage(uri);
       }
     } else {
-      AutoConnect*  mother = _ac;
+      AutoConnectExt<AutoConnectConfigExt>*  mother = _ac;
       // Overwrite actual AutoConnectMenu title to the Aux. page title
       if (_title.length())
         mother->_menuTitle = _title;
@@ -604,20 +728,27 @@ PageElement* AutoConnectAux::_setupPage(const String& uri) {
       elm->setMold(FPSTR(_PAGE_AUX));
 
       if (_responsive) {
-        elm->addToken(FPSTR("HEAD"), std::bind(&AutoConnect::_token_HEAD, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("HEAD"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_HEAD, mother, std::placeholders::_1));
         elm->addToken(FPSTR("AUX_TITLE"), std::bind(&AutoConnectAux::_injectTitle, this, std::placeholders::_1));
-        elm->addToken(FPSTR("CSS_BASE"), std::bind(&AutoConnect::_token_CSS_BASE, mother, std::placeholders::_1));
-        elm->addToken(FPSTR("CSS_UL"), std::bind(&AutoConnect::_token_CSS_UL, mother, std::placeholders::_1));
-        elm->addToken(FPSTR("CSS_INPUT_BUTTON"), std::bind(&AutoConnect::_token_CSS_INPUT_BUTTON, mother, std::placeholders::_1));
-        elm->addToken(FPSTR("CSS_INPUT_TEXT"), std::bind(&AutoConnect::_token_CSS_INPUT_TEXT, mother, std::placeholders::_1));
-        elm->addToken(FPSTR("CSS_LUXBAR"), std::bind(&AutoConnect::_token_CSS_LUXBAR, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("CSS_BASE"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_CSS_BASE, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("CSS_UL"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_CSS_UL, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("CSS_INPUT_BUTTON"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_CSS_INPUT_BUTTON, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("CSS_INPUT_TEXT"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_CSS_INPUT_TEXT, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("CSS_LUXBAR_BODY"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_CSS_LUXBAR_BODY, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("CSS_LUXBAR_HEADER"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_CSS_LUXBAR_HEADER, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("CSS_LUXBAR_BGR"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_CSS_LUXBAR_BGR, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("CSS_LUXBAR_ANI"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_CSS_LUXBAR_ANI, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("CSS_LUXBAR_MEDIA"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_CSS_LUXBAR_MEDIA, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("CSS_LUXBAR_ITEM"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_CSS_LUXBAR_ITEM, mother, std::placeholders::_1));
         elm->addToken(FPSTR("AUX_CSS"), std::bind(&AutoConnectAux::_insertStyle, this, std::placeholders::_1));
-        elm->addToken(FPSTR("MENU_PRE"), std::bind(&AutoConnect::_token_MENU_PRE, mother, std::placeholders::_1));
-        elm->addToken(FPSTR("MENU_AUX"), std::bind(&AutoConnect::_token_MENU_AUX, mother, std::placeholders::_1));
-        elm->addToken(FPSTR("MENU_POST"), std::bind(&AutoConnect::_token_MENU_POST, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("MENU_PRE"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_MENU_PRE, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("MENU_LIST"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_MENU_LIST, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("MENU_AUX"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_MENU_AUX, mother, std::placeholders::_1));
+        elm->addToken(FPSTR("MENU_POST"), std::bind(&AutoConnectExt<AutoConnectConfigExt>::_token_MENU_POST, mother, std::placeholders::_1));
         elm->addToken(FPSTR("AUX_URI"), std::bind(&AutoConnectAux::_indicateUri, this, std::placeholders::_1));
         elm->addToken(FPSTR("ENC_TYPE"), std::bind(&AutoConnectAux::_indicateEncType, this, std::placeholders::_1));
         elm->addToken(FPSTR("AUX_ELEMENT"), std::bind(&AutoConnectAux::_insertElement, this, std::placeholders::_1));
+        elm->addToken(FPSTR("POSTSCRIPT"), std::bind(&AutoConnectAux::_insertScript, this, std::placeholders::_1));
 
         // Register authentication
         // Determine the necessity of authentication from the conditions of
@@ -646,12 +777,107 @@ PageElement* AutoConnectAux::_setupPage(const String& uri) {
 }
 
 /**
+ * An exit for the endpoint responding to a Fetch request issued from the
+ * AutoConnectAux client with AutoConnectElement::on.
+ * This responder sends back a response message based on the `responses` member
+ * of each AutoConnectElement held by the requesting AutoConnectAux. 
+ * The structure of the responses member, which is the response source, is
+ * declared an AutoConnectElementBasis::ACResponse_t type to carry values that
+ * can dynamically update the AutoConnectElement on the AutoConnectAux page.
+ * The response content it produces is a JSON message in the following form.
+ * - [ {"name":"value"}, {"name":"value"} ]
+ * @param  args  Request arguments from the Web client.
+ * @return An empty string.
+ */
+String AutoConnectAux::_fetchEndpoint(PageArgument& args) {
+  int responseCode = 500;
+  PGM_P responseContent;
+  char* res = nullptr;
+
+  String  auxPath = args.arg(String(F(AUTOCONNECT_AUXURI_PARAM)));
+  // After identifying the AutoConnectAux that should respond to the endpoint
+  // request, the response message is constructed from the AutoConnectElements
+  // contained within it.
+  if (auxPath.length()) {
+    auxPath.replace("&#47;", "/");
+    if (_uri != auxPath) {
+      if (_next) {
+        _next->_fetchEndpoint(args);
+        return String();
+      }
+      else
+        responseContent = String(String(F("No AutoConnectAux - ")) + auxPath).c_str();
+    }
+    else {
+      AC_DBG("Ep %s accepted\n", auxPath.c_str());
+
+      // Fetch from the client forwards the value of each AutoConnectElement
+      // along with its request to the WebServer as POST body data. `/_ac/work`
+      // endpoint also receives the current value of each forwarded AutoConnectElement.
+      fetchElement();
+
+      // Identify the AutoConnectElement that fired the Fetch and call back the
+      // registered `on` handler with in the sketch.
+      String  currentTarget = args.arg(AUTOCONNECT_FETCHELEMENT_PARAM);
+      AutoConnectElement* srcElm = getElement(currentTarget);
+      if (srcElm) {
+        srcElm->reply(*this);
+
+        // Construct the JSON message that will serve as the response.
+        size_t  jbSize = sizeof("[]");
+        for (AutoConnectElement& elm : _addonElm)
+          jbSize += elm.responseLength() + sizeof(',');
+
+        res = new char[jbSize];
+        if (res) {
+          char* bp = res;
+          *bp++ = '[';
+          char* tp = bp;
+          for (AutoConnectElement& elm : _addonElm) {
+            char* np = bp;
+            if ((bp += elm.responseJSON(bp)) > np)
+              *bp++ = ',';
+
+            // After exiting the `on` handler, all response data given by the
+            // user sketch is cleared.
+            elm.responses.clear();
+          }
+          if (tp == bp)
+            bp++;
+          *(--bp)++ = ']';
+          *bp = '\0';
+          _ac->_webServer->enableCORS(true);
+          responseCode = 200;
+          responseContent = res;
+        }
+        else
+          responseContent = PSTR("Response buffer allocation failed");
+      }
+      else {
+        res = new char[currentTarget.length() + sizeof('\0')];
+        sprintf_P(res, PSTR("No endpoints with " AUTOCONNECT_FETCHELEMENT_PARAM ":%s"), currentTarget.c_str());
+        responseContent = res;
+      }
+    }
+  }
+  else
+    responseContent = PSTR("Invalid interface");
+
+  AC_DBG(AUTOCONNECT_URI_FETCH "(%d) %s\n", responseCode, responseContent);
+  _ac->_webServer->send(responseCode, responseCode == 200 ? "application/json" : "text/plain", responseContent);
+  _ac->_responsePage->cancel();
+  if (res)
+    delete[] res;
+  return String();
+}
+
+/**
  * Store element values owned by AutoConnectAux that caused the request.
  * Save the current arguments remaining in the Web server object when
  * this function invoked.
  * @param webServer A pointer to the class object of WebServerClass
  */
-void AutoConnectAux::_storeElements(WebServerClass* webServer) {
+void AutoConnectAux::_storeElements(WebServer* webServer) {
   // Retrieve each element value, Overwrites the value of all cataloged
   // AutoConnectElements with arguments inherited from last http request.
   for (AutoConnectElement& elm : _addonElm) {
@@ -688,87 +914,10 @@ void AutoConnectAux::_storeElements(WebServerClass* webServer) {
       }
     }
   }
-  AC_DBG_DUMB(",elements stored\n");
+  AC_DBG_DUMB(", elements stored\n");
 }
 
 #ifdef AUTOCONNECT_USE_JSON
-
-/**
- * Load AutoConnectAux page from JSON description stored in PROGMEM.
- * This function can load AutoConnectAux for multiple AUX pages written
- * in JSON and is registered in AutoConnect.
- * @param  aux  JSON description to be load.
- * @return true Successfully loaded.
- */
-bool AutoConnect::load(PGM_P aux) {
-  return _parseJson<const __FlashStringHelper*>(reinterpret_cast<const __FlashStringHelper*>(aux));
-}
-
-/**
- * Load AutoConnectAux page from JSON description stored in PROGMEM.
- * This function can load AutoConnectAux for multiple AUX pages written
- * in JSON and is registered in AutoConnect.
- * @param  aux  JSON description to be load.
- * @return true Successfully loaded.
- */
-bool AutoConnect::load(const __FlashStringHelper* aux) {
-  return _parseJson<const __FlashStringHelper*>(aux);
-}
-
-/**
- * Load AutoConnectAux page from JSON description stored in the sketch.
- * This function can load AutoConnectAux for multiple AUX pages written
- * in JSON and is registered in AutoConnect.
- * @param  aux  JSON description to be load.
- * @return true Successfully loaded.
- */
-bool AutoConnect::load(const String& aux) {
-  return _parseJson<const String&>(aux);
-}
-
-/**
- * Load AutoConnectAux page from JSON description from the stream.
- * This function can load AutoConnectAux for multiple AUX pages written
- * in JSON and is registered in AutoConnect.
- * @param  aux  Stream for read AutoConnectAux elements.
- * @return true Successfully loaded.
- */
-bool AutoConnect::load(Stream& aux) {
-  return _parseJson<Stream&>(aux);
-}
-
-/**
- * Load AutoConnectAux page from JSON object.
- * @param  aux  A JsonVariant object that stores each element of AutoConnectAux.
- * @return true Successfully loaded.
- */
-bool AutoConnect::_load(JsonVariant& auxJson) {
-  bool  rc = true;
-  if (auxJson.is<JsonArray>()) {
-    ArduinoJsonArray  jb = auxJson.as<JsonArray>();
-    for (ArduinoJsonObject  auxJson : jb) {
-      AutoConnectAux* newAux = new AutoConnectAux;
-      if (newAux->_load(auxJson))
-        join(*newAux);
-      else {
-        delete newAux;
-        rc = false;
-        break;
-      }
-    }
-  }
-  else {
-    ArduinoJsonObject jb = auxJson.as<JsonObject>();
-    AutoConnectAux* newAux = new AutoConnectAux;
-    if (newAux->_load(jb))
-      join(*newAux);
-    else {
-      delete newAux;
-      rc = false;
-    }
-  }
-  return rc;
-}
 
 /**
  * Create an instance from the AutoConnectElement of the JSON object.
@@ -887,9 +1036,15 @@ bool AutoConnectAux::load(Stream& in, const size_t size) {
  * @return false loading unsuccessful, JSON parsing error occurred.
  */
 bool AutoConnectAux::_load(JsonObject& jb) {
-  _title = jb[F(AUTOCONNECT_JSON_KEY_TITLE)].as<String>();
-  _uriStr = jb[F(AUTOCONNECT_JSON_KEY_URI)].as<String>();
-  _uri = _uriStr.c_str();
+  if (jb.containsKey(F(AUTOCONNECT_JSON_KEY_TITLE)))
+    _title = jb[F(AUTOCONNECT_JSON_KEY_TITLE)].as<String>();
+  if (jb.containsKey(F(AUTOCONNECT_JSON_KEY_URI)))
+    _uri = jb[F(AUTOCONNECT_JSON_KEY_URI)].as<String>();
+  else if (!_uri.length()) {
+    AC_DBG("Warn. %s loaded null %s\n", _title.c_str(), AUTOCONNECT_JSON_KEY_TITLE);
+  }
+  if (jb.containsKey(F(AUTOCONNECT_JSON_KEY_CORS)))
+    _cors = jb[F(AUTOCONNECT_JSON_KEY_CORS)].as<bool>();
   if (jb.containsKey(F(AUTOCONNECT_JSON_KEY_MENU)))
     _menu = jb[F(AUTOCONNECT_JSON_KEY_MENU)].as<bool>();
   if (jb.containsKey(F(AUTOCONNECT_JSON_KEY_RESPONSE)))
@@ -1030,7 +1185,7 @@ size_t AutoConnectAux::saveElement(Stream& out, std::vector<String> const& names
   // Calculate JSON buffer size
   if (amount == 0) {
     bufferSize += JSON_OBJECT_SIZE(4);
-    bufferSize += sizeof(AUTOCONNECT_JSON_KEY_TITLE) + _title.length() + 1 + sizeof(AUTOCONNECT_JSON_KEY_URI) + _uriStr.length() + 1 + sizeof(AUTOCONNECT_JSON_KEY_RESPONSE) + sizeof(AUTOCONNECT_JSON_KEY_MENU) + sizeof(AUTOCONNECT_JSON_KEY_ELEMENT) + sizeof(AUTOCONNECT_JSON_KEY_AUTH) + sizeof(AUTOCONNECT_JSON_VALUE_DIGEST);
+    bufferSize += sizeof(AUTOCONNECT_JSON_KEY_TITLE) + _title.length() + 1 + sizeof(AUTOCONNECT_JSON_KEY_URI) + _uri.length() + 1 + sizeof(AUTOCONNECT_JSON_KEY_RESPONSE) + sizeof(AUTOCONNECT_JSON_KEY_MENU) + sizeof(AUTOCONNECT_JSON_KEY_ELEMENT) + sizeof(AUTOCONNECT_JSON_KEY_AUTH) + sizeof(AUTOCONNECT_JSON_VALUE_DIGEST);
     bufferSize += JSON_ARRAY_SIZE(_addonElm.size());
   }
   else
@@ -1065,8 +1220,11 @@ size_t AutoConnectAux::saveElement(Stream& out, std::vector<String> const& names
     else if (amount == 0) {
       ArduinoJsonObject json = ARDUINOJSON_CREATEOBJECT(jb);
       json[F(AUTOCONNECT_JSON_KEY_TITLE)] = _title;
-      json[F(AUTOCONNECT_JSON_KEY_URI)] = _uriStr;
-      json[F(AUTOCONNECT_JSON_KEY_RESPONSE)] = _responsive;
+      json[F(AUTOCONNECT_JSON_KEY_URI)] = _uri;
+      if (_cors)
+        json[F(AUTOCONNECT_JSON_KEY_CORS)] = _cors;
+      if (_responsive)
+        json[F(AUTOCONNECT_JSON_KEY_RESPONSE)] = _responsive;
       json[F(AUTOCONNECT_JSON_KEY_MENU)] = _menu;
       if (_httpAuth == AC_AUTH_BASIC)
         json[F(AUTOCONNECT_JSON_KEY_AUTH)] = String(F(AUTOCONNECT_JSON_VALUE_BASIC));
