@@ -10,7 +10,7 @@ The lock can be controlled via MQTT and integrated into Home Assistant.
 
 Thanks go to <a href="https://github.com/RoP09">RoP09</a>, <a href="https://github.com/tc-maxx">tc-maxx</a>, <a href="https://github.com/henfri">henfri</a>, <a href="https://github.com/MariusSchiffer">MariusSchiffer</a> and of course <a href="https://github.com/oyooyo">oyooyo</a> for their brillant work!
 
-This is a fork from <a href"https://github.com/mccoy88f/esp32-keyble-ha">esp32-keyble-ha</a> from <a href="https://github.com/mccoy88f">mccoy88f</a> with some improvements.
+This is a fork from <a href="https://github.com/mccoy88f/esp32-keyble-ha">esp32-keyble-ha</a> from <a href="https://github.com/mccoy88f">mccoy88f</a> with some improvements.
 
 Fiddled around a bit to get it to run more stable.
 IF you have problem with wifi reconnect before flash in send this command in your terminal/shell changing port with yours:
