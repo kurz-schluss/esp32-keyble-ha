@@ -88,9 +88,7 @@ modules.xml
 .piolibdeps
 .clang_complete
 .gcc-flags.json
-CMakeListsPrivate.txt
-CMakeLists.txt
-cmake-build-debug
+.pio
 
 ### VisualStudioCode ###
 .vscode/*
