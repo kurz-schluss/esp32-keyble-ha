@@ -140,9 +140,10 @@ void eQ3::onResult(BLEAdvertisedDevice advertisedDevice) {
 // --[setOnStatusChange]--------------------------------------------------------
 // -----------------------------------------------------------------------------
 void eQ3::setOnStatusChange(std::function<void(LockStatus)> cb) {
-    xSemaphoreTake(mutex, SEMAPHORE_WAIT_TIME);
-    onStatusChange = cb;
-    xSemaphoreGive(mutex);
+    if (xSemaphoreTake(mutex, SEMAPHORE_WAIT_TIME)) {
+        onStatusChange = cb;
+        xSemaphoreGive(mutex);
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -229,187 +230,189 @@ bool eQ3::sendMessage(eQ3Message::Message *msg) {
 // --[onNotify]-----------------------------------------------------------------
 // -----------------------------------------------------------------------------
 void eQ3::onNotify(BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify) {
-    xSemaphoreTake(mutex, SEMAPHORE_WAIT_TIME);
-    eQ3Message::MessageFragment frag;
-    lastActivity = time(NULL);
-    frag.data = std::string((char *) pData, length);
-    recvFragments.push_back(frag);
-    Serial.print("# Fragment Data: ");
-    Serial.println(string_to_hex(frag.data).c_str());
-    if (frag.isLast()) {
-        if (!sendQueue.empty())
-            sendQueue.pop();
-        // concat message
-        std::stringstream ss;
-        auto msgtype = recvFragments.front().getType();
-        for (auto &received_fragment : recvFragments) {
-            ss << received_fragment.getData();
-        }
-        std::string msgdata = ss.str();
-        recvFragments.clear();
-        if (eQ3Message::Message::isTypeSecure(msgtype)) {
-            auto msg_security_counter = static_cast<uint16_t>(msgdata[msgdata.length() - 6]);
-            msg_security_counter <<= 8;
-            msg_security_counter += msgdata[msgdata.length() - 5];
-            //Serial.println((int)msg_security_counter);
-            if (msg_security_counter <= state.remote_security_counter) {
-                Serial.print("# Msg. security counter: ");
-                Serial.println(msg_security_counter);
-                Serial.print("# Security counter: ");
-                Serial.println(state.remote_security_counter);
-                Serial.println("# Falscher remote counter");
-                xSemaphoreGive(mutex);
-                return;
+    if (xSemaphoreTake(mutex, SEMAPHORE_WAIT_TIME)) {
+        eQ3Message::MessageFragment frag;
+        lastActivity = time(NULL);
+        frag.data = std::string((char *) pData, length);
+        recvFragments.push_back(frag);
+        Serial.print("# Fragment Data: ");
+        Serial.println(string_to_hex(frag.data).c_str());
+        if (frag.isLast()) {
+            if (!sendQueue.empty())
+                sendQueue.pop();
+            // concat message
+            std::stringstream ss;
+            auto msgtype = recvFragments.front().getType();
+            for (auto &received_fragment : recvFragments) {
+                ss << received_fragment.getData();
             }
-            state.remote_security_counter = msg_security_counter;
-            string msg_auth_value = msgdata.substr(msgdata.length() - 4, 4);
-            Serial.print("# Auth value: ");
-            Serial.println(string_to_hex(msg_auth_value).c_str());
-            //std::string decrypted = crypt_data(msgdata.substr(0, msgdata.length() - 6), msgtype,
-            std::string decrypted = crypt_data(msgdata.substr(1, msgdata.length() - 7), msgtype, state.local_session_nonce, state.remote_security_counter, state.user_key);
-            Serial.print("# Crypted data: ");
-            Serial.println(string_to_hex(msgdata.substr(1, msgdata.length() - 7)).c_str());
-            std::string computed_auth_value = compute_auth_value(decrypted, msgtype, state.local_session_nonce, state.remote_security_counter, state.user_key);
-            if (msg_auth_value != computed_auth_value) {
-                Serial.println("# Auth value mismatch");
-                xSemaphoreGive(mutex);
-                return;
-            }
-            msgdata = decrypted;
-            Serial.print("# Decrypted: ");
-            Serial.println(string_to_hex(msgdata).c_str());
-        }
-
-        switch (msgtype) {
-            case 0: {
-                // fragment ack, remove first
-                if (!sendQueue.empty())
-                    sendQueue.pop();
-                xSemaphoreGive(mutex);
-                return;
-            }
-
-            case 0x81: // answer with security
-                // TODO call callback to user that pairing succeeded
-                Serial.println("# Answer with security...");
-                break;
-
-            case 0x01: // answer without security
-                // TODO report error
-                Serial.println("# Answer without security...");
-                break;
-
-            case 0x05: {
-                // status changed notification
-                Serial.println("# Status changed notification");
-                // TODO request status
-                auto * message = new eQ3Message::StatusRequestMessage;
-                sendMessage(message);
-                break;
-            }
-
-            case 0x03: {
-                // connection info message
-                eQ3Message::Connection_Info_Message message;
-                message.data = msgdata;
-                state.user_id = message.getUserId();
-                state.remote_session_nonce = message.getRemoteSessionNonce();
-                assert(state.remote_session_nonce.length() == 8);
-                state.local_security_counter = 1;
-                state.remote_security_counter = 0;
-                state.connectionState = NONCES_EXCHANGED;
-
-                Serial.println("# Nonce exchanged");
-                auto queueFunc = queue.find(NONCES_EXCHANGED);
-                if (queueFunc != queue.end()) {
-                    queue.erase(queueFunc);
-                    //xSemaphoreGive(mutex); // function will take the semaphore again
-                    queueFunc->second();
+            std::string msgdata = ss.str();
+            recvFragments.clear();
+            if (eQ3Message::Message::isTypeSecure(msgtype)) {
+                auto msg_security_counter = static_cast<uint16_t>(msgdata[msgdata.length() - 6]);
+                msg_security_counter <<= 8;
+                msg_security_counter += msgdata[msgdata.length() - 5];
+                //Serial.println((int)msg_security_counter);
+                if (msg_security_counter <= state.remote_security_counter) {
+                    Serial.print("# Msg. security counter: ");
+                    Serial.println(msg_security_counter);
+                    Serial.print("# Security counter: ");
+                    Serial.println(state.remote_security_counter);
+                    Serial.println("# Falscher remote counter");
+                    xSemaphoreGive(mutex);
+                    return;
                 }
-                xSemaphoreGive(mutex);
-                return;
+                state.remote_security_counter = msg_security_counter;
+                string msg_auth_value = msgdata.substr(msgdata.length() - 4, 4);
+                Serial.print("# Auth value: ");
+                Serial.println(string_to_hex(msg_auth_value).c_str());
+                //std::string decrypted = crypt_data(msgdata.substr(0, msgdata.length() - 6), msgtype,
+                std::string decrypted = crypt_data(msgdata.substr(1, msgdata.length() - 7), msgtype, state.local_session_nonce, state.remote_security_counter, state.user_key);
+                Serial.print("# Crypted data: ");
+                Serial.println(string_to_hex(msgdata.substr(1, msgdata.length() - 7)).c_str());
+                std::string computed_auth_value = compute_auth_value(decrypted, msgtype, state.local_session_nonce, state.remote_security_counter, state.user_key);
+                if (msg_auth_value != computed_auth_value) {
+                    Serial.println("# Auth value mismatch");
+                    xSemaphoreGive(mutex);
+                    return;
+                }
+                msgdata = decrypted;
+                Serial.print("# Decrypted: ");
+                Serial.println(string_to_hex(msgdata).c_str());
             }
 
-            case 0x83: {
-                // status info
-                eQ3Message::Status_Info_Message message;
-                message.data = msgdata;
-                Serial.print("# New state: ");
-                Serial.println(message.getLockStatus());
-                _LockStatus = message.getLockStatus();
-                raw_data = message.data;
-                //onStatusChange((LockStatus)message.getLockStatus()); // BUG: löst einen Reset aus!!
-                break;
+            switch (msgtype) {
+                case 0: {
+                    // fragment ack, remove first
+                    if (!sendQueue.empty())
+                        sendQueue.pop();
+                    xSemaphoreGive(mutex);
+                    return;
+                }
+
+                case 0x81: // answer with security
+                    // TODO call callback to user that pairing succeeded
+                    Serial.println("# Answer with security...");
+                    break;
+
+                case 0x01: // answer without security
+                    // TODO report error
+                    Serial.println("# Answer without security...");
+                    break;
+
+                case 0x05: {
+                    // status changed notification
+                    Serial.println("# Status changed notification");
+                    // TODO request status
+                    auto * message = new eQ3Message::StatusRequestMessage;
+                    sendMessage(message);
+                    break;
+                }
+
+                case 0x03: {
+                    // connection info message
+                    eQ3Message::Connection_Info_Message message;
+                    message.data = msgdata;
+                    state.user_id = message.getUserId();
+                    state.remote_session_nonce = message.getRemoteSessionNonce();
+                    assert(state.remote_session_nonce.length() == 8);
+                    state.local_security_counter = 1;
+                    state.remote_security_counter = 0;
+                    state.connectionState = NONCES_EXCHANGED;
+
+                    Serial.println("# Nonce exchanged");
+                    auto queueFunc = queue.find(NONCES_EXCHANGED);
+                    if (queueFunc != queue.end()) {
+                        queue.erase(queueFunc);
+                        //xSemaphoreGive(mutex); // function will take the semaphore again
+                        queueFunc->second();
+                    }
+                    xSemaphoreGive(mutex);
+                    return;
+                }
+
+                case 0x83: {
+                    // status info
+                    eQ3Message::Status_Info_Message message;
+                    message.data = msgdata;
+                    Serial.print("# New state: ");
+                    Serial.println(message.getLockStatus());
+                    _LockStatus = message.getLockStatus();
+                    raw_data = message.data;
+                    //onStatusChange((LockStatus)message.getLockStatus()); // BUG: löst einen Reset aus!!
+                    break;
+                }
+
+                default:
+                /*case 0x8f: */{ // user info
+                    Serial.println("# User info");
+                    xSemaphoreGive(mutex);
+                    return;
+                }
             }
 
-            default:
-            /*case 0x8f: */{ // user info
-                Serial.println("# User info");
-                xSemaphoreGive(mutex);
-                return;
-            }
+        } else {
+            // create ack
+            Serial.println("# send Ack ");
+            eQ3Message::FragmentAckMessage ack(frag.getStatusByte());
+            sendQueue.push(ack);
         }
-
-    } else {
-        // create ack
-        Serial.println("# send Ack ");
-        eQ3Message::FragmentAckMessage ack(frag.getStatusByte());
-        sendQueue.push(ack);
+        xSemaphoreGive(mutex);
     }
-    xSemaphoreGive(mutex);
 }
 
 // -----------------------------------------------------------------------------
 // --[pairingRequest]-----------------------------------------------------------
 // -----------------------------------------------------------------------------
 void eQ3::pairingRequest(std::string cardkey) {
-    xSemaphoreTake(mutex, SEMAPHORE_WAIT_TIME);
-    if (state.connectionState < NONCES_EXCHANGED) {
-        // TODO check if slot for nonces_exchanged is already set?
+    if (xSemaphoreTake(mutex, SEMAPHORE_WAIT_TIME)) {
+        if (state.connectionState < NONCES_EXCHANGED) {
+            // TODO check if slot for nonces_exchanged is already set?
 
-        // TODO callback when pairing finished, or make blocking?
-        queue.insert(make_pair(NONCES_EXCHANGED,[this,cardkey]{
-            pairingRequest(cardkey);
-        }));
-        Serial.println("# Pairing request");
-        exchangeNonces();
+            // TODO callback when pairing finished, or make blocking?
+            queue.insert(make_pair(NONCES_EXCHANGED,[this,cardkey]{
+                pairingRequest(cardkey);
+            }));
+            Serial.println("# Pairing request");
+            exchangeNonces();
+            xSemaphoreGive(mutex);
+            return;
+        }
+        auto *message = new eQ3Message::PairingRequestMessage();
+        //return concatenated_array([data.user_id], padded_array(data.encrypted_pair_key, 22, 0), integer_to_byte_array(data.security_counter, 2), data.authentication_value);
+        message->data.append(1, state.user_id);
+        Serial.print("#Message id: ");
+        Serial.println((int) message->id);
+
+        // enc pair key
+        assert(state.remote_session_nonce.length() == 8);
+        assert(state.user_key.length() == 16);
+
+        std::string card_key = hexstring_to_string(cardkey);
+
+        string encrypted_pair_key = crypt_data(state.user_key, 0x04, state.remote_session_nonce, state.local_security_counter, card_key);
+        if (encrypted_pair_key.length() < 22)
+            encrypted_pair_key.append(22 - encrypted_pair_key.length(), 0);
+        assert(encrypted_pair_key.length() == 22);
+        message->data.append(encrypted_pair_key);
+
+        // counter
+        message->data.append(1, (char) (state.local_security_counter >> 8));
+        message->data.append(1, (char) (state.local_security_counter));
+
+        // auth value
+        string extra;
+        extra.append(1, state.user_id);
+        extra.append(state.user_key);
+        if (extra.length() < 23)
+            extra.append(23 - extra.length(), 0);
+        assert(extra.length() == 23);
+        string auth_value = compute_auth_value(extra, 0x04, state.remote_session_nonce, state.local_security_counter, card_key);
+        message->data.append(auth_value);
+        assert(message->data.length() == 29);
+        sendMessage(message);
         xSemaphoreGive(mutex);
-        return;
     }
-    auto *message = new eQ3Message::PairingRequestMessage();
-    //return concatenated_array([data.user_id], padded_array(data.encrypted_pair_key, 22, 0), integer_to_byte_array(data.security_counter, 2), data.authentication_value);
-    message->data.append(1, state.user_id);
-    Serial.print("#Message id: ");
-    Serial.println((int) message->id);
-
-    // enc pair key
-    assert(state.remote_session_nonce.length() == 8);
-    assert(state.user_key.length() == 16);
-
-    std::string card_key = hexstring_to_string(cardkey);
-
-    string encrypted_pair_key = crypt_data(state.user_key, 0x04, state.remote_session_nonce, state.local_security_counter, card_key);
-    if (encrypted_pair_key.length() < 22)
-        encrypted_pair_key.append(22 - encrypted_pair_key.length(), 0);
-    assert(encrypted_pair_key.length() == 22);
-    message->data.append(encrypted_pair_key);
-
-    // counter
-    message->data.append(1, (char) (state.local_security_counter >> 8));
-    message->data.append(1, (char) (state.local_security_counter));
-
-    // auth value
-    string extra;
-    extra.append(1, state.user_id);
-    extra.append(state.user_key);
-    if (extra.length() < 23)
-        extra.append(23 - extra.length(), 0);
-    assert(extra.length() == 23);
-    string auth_value = compute_auth_value(extra, 0x04, state.remote_session_nonce, state.local_security_counter, card_key);
-    message->data.append(auth_value);
-    assert(message->data.length() == 29);
-    sendMessage(message);
-    xSemaphoreGive(mutex);
 }
 
 // -----------------------------------------------------------------------------
@@ -430,12 +433,13 @@ void eQ3::sendNextFragment() {
 }
 
 void eQ3::sendCommand(CommandType command) {
-    xSemaphoreTake(mutex, SEMAPHORE_WAIT_TIME);
-    Serial.println("# Getting Semaphore for sendcommand");
-    auto msg = new eQ3Message::CommandMessage(command);
-    sendMessage(msg);
-    Serial.println("# Semaphore handover");
-    xSemaphoreGive(mutex);
+    if (xSemaphoreTake(mutex, SEMAPHORE_WAIT_TIME)) {
+        Serial.println("# Getting Semaphore for sendcommand");
+        auto msg = new eQ3Message::CommandMessage(command);
+        sendMessage(msg);
+        Serial.println("# Semaphore handover");
+        xSemaphoreGive(mutex);
+    }
 }
 
 void eQ3::unlock() {
@@ -451,8 +455,9 @@ void eQ3::open() {
 }
 
 void eQ3::updateInfo() {
-    xSemaphoreTake(mutex, SEMAPHORE_WAIT_TIME);
-    auto * message = new eQ3Message::StatusRequestMessage;
-    sendMessage(message);
-    xSemaphoreGive(mutex);
+    if (xSemaphoreTake(mutex, SEMAPHORE_WAIT_TIME)) {
+        auto * message = new eQ3Message::StatusRequestMessage;
+        sendMessage(message);
+        xSemaphoreGive(mutex);
+    }
 }

@@ -370,7 +370,8 @@ void MqttPublish()
   Serial.println(charBuffer1);
   mqtt_pub = charBuffer1;
 
-  delay(100);
+  //delay(100);
+  vTaskDelay(100/portTICK_PERIOD_MS);
 
   //MQTT_PUB2 task
   String str_task="waiting";
@@ -505,7 +506,7 @@ void rootPage()
     //return server.requestAuthentication(DIGEST_AUTH, www_realm);
     //Digest Auth Method with Custom realm and Failure Response
     {
-      Serial.print("# Auth required for login!");
+      Serial.println("# Auth required for login!");
       return Server.requestAuthentication(DIGEST_AUTH, www_realm, authFailResponse);
     }
   Server.send(200, "text/html", content);  
@@ -543,7 +544,8 @@ void SetupWifi()
    int maxWait=100;
    while (WiFi.status() != WL_CONNECTED) {
     Serial.println("# WIFI: checking SSiD: " + WiFi.SSID());
-    delay(500);
+    //delay(500);
+    vTaskDelay(500/portTICK_PERIOD_MS);
     
     if (maxWait <= 0)
         ESP.restart();
@@ -592,7 +594,7 @@ void printLocalTime(){
 // ---[Setup]-------------------------------------------------------------------
 void setup() {
 
-  delay(1000);
+  //delay(1000);
   Serial.begin(115200);
   Serial.println("---Starting up...---");
   Serial.setDebugOutput(true);
@@ -717,7 +719,7 @@ if (wifiActive)
 
 if (do_restart) {
     Serial.println("*** Restarting device ***");
-    delay(1000); // Optionally, provide a delay before restarting
+    //delay(1000); // Optionally, provide a delay before restarting
 
     // Publish the "working" state on the task topic
     mqttClient.publish((String(MqttTopic + MQTT_PUB2).c_str()), "working");
@@ -728,10 +730,6 @@ if (do_restart) {
     ESP.restart(); // Perform a software restart of the device
 }
 
-if (do_restart) {
-    // ... (come sopra)
-    do_restart = false; // Reset the restart flag
-}
 
 if (do_open || do_lock || do_unlock || do_status || do_toggle || do_pair) 
 {
@@ -744,7 +742,8 @@ if (do_open || do_lock || do_unlock || do_status || do_toggle || do_pair)
   Serial.print("/");
   Serial.println(charBuffer4);
   mqtt_pub2 = charBuffer4;
-  delay(200);
+  //delay(200);
+  vTaskDelay(200/portTICK_PERIOD_MS);
   SetWifi(false);
   yield();
   waitForAnswer=true;
@@ -867,11 +866,13 @@ if (do_open || do_lock || do_unlock || do_status || do_toggle || do_pair)
         do
         {
           keyble->bleClient->disconnect();
-          delay(100);
+          //delay(100);
+          vTaskDelay(100/portTICK_PERIOD_MS);
         }
         while(keyble->state.connectionState != DISCONNECTED && !timeout);
 
-        delay(100);
+        //delay(100);
+        vTaskDelay(100/portTICK_PERIOD_MS);
         yield();
           
         SetWifi(true);
